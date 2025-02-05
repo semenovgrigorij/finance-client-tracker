@@ -73,16 +73,11 @@ async function getRemonlineCookies() {
   try {
     console.log("Запуск браузера...");
     const browser = await puppeteer.launch({
-      headless: true, // изменено с false на true для продакшена
+      headless: "new",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
-        "--disable-gpu",
         "--disable-dev-shm-usage",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
-        "--disable-extensions",
       ],
       executablePath:
         process.env.NODE_ENV === "production"
