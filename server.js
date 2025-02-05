@@ -73,8 +73,12 @@ async function getRemonlineCookies() {
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-gpu",
         "--disable-dev-shm-usage",
+        "--no-first-run",
+        "--no-zygote",
         "--single-process",
+        "--disable-extensions",
       ],
       executablePath:
         process.env.NODE_ENV === "production"
