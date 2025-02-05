@@ -61,16 +61,25 @@ app.post("/api/login", async (req, res) => {
 });
 ////////////
 async function getRemonlineCookies() {
-  // Используем дефолтные значения из .env если нет пользовательских данных
-  return getRemonlineCookiesForUser(
-    process.env.REMONLINE_EMAIL,
-    process.env.REMONLINE_PASSWORD
-  );
-  /* try {
+  try {
     const browser = await puppeteer.launch({
-      headless: false, // Открывает браузер для отладки
-      devtools: true, // Включает DevTools
+      headless: true, // изменено с false на true для продакшена
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
+        "--disable-gpu",
+      ],
+      executablePath:
+        process.env.NODE_ENV === "production"
+          ? "/usr/bin/google-chrome-stable" // путь к Chrome на Render
+          : undefined, // локальный путь по умолчанию
     });
+
     const page = await browser.newPage();
 
     try {
@@ -108,12 +117,11 @@ async function getRemonlineCookies() {
   } catch (error) {
     if (error.name === "TargetCloseError") {
       console.error("Ошибка: Браузер был закрыт во время выполнения операции");
-      // Здесь можно добавить логику для повторного запуска операции
     } else {
       console.error("Произошла другая ошибка:", error);
     }
     return null;
-  } */
+  }
 }
 
 async function getRemonlineCookiesForUser(email, password) {
