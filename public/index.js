@@ -1,4 +1,4 @@
-async function handleLogin(email, password) {
+async function handleLogin() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   const loginError = document.getElementById("loginError");
