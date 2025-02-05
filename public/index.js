@@ -2,7 +2,7 @@
 
 async function handleLogin(email, password) {
   // const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  // const password = document.getElementById("password").value;
   const loginError = document.getElementById("loginError");
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
