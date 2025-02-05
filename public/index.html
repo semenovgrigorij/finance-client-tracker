@@ -29,9 +29,9 @@
         autocomplete="off"
         class="login-container"
       >
-        <h2>Вход в систему</h2>
+        <h2>Вхід у систему</h2>
         <div class="form-group">
-          <label for="email">Логин или Email:</label>
+          <label for="email">Логін або Email:</label>
           <input
             type="email"
             id="email"
@@ -52,9 +52,9 @@
         </div>
         <!-- <button onclick="handleLogin()">Войти</button> -->
         <button type="submit" id="loginButton">
-          <span class="default-text">Войти</span>
+          <span class="default-text">Увійти</span>
           <span class="loading-text" style="display: none">
-            Выполняется вход...
+            Виконується вхід...
           </span>
         </button>
         <div
@@ -64,28 +64,28 @@
       </form>
 
       <div id="mainContent" style="display: none">
-        <h1>Тест API Remonline</h1>
-        <label for="idInput">Введите ID товара:</label>
+        <h1>Історія руху товару</h1>
+        <label for="idInput">Введіть ID товару:</label>
         <input type="text" id="idInput" onkeydown="handleKeyDown(event)" />
 
-        <label for="locationSelect">Выберите локацию:</label>
+        <label for="locationSelect">Виберіть локацію:</label>
         <select id="locationSelect" onchange="handleLocationChange()">
-          <option value="">Поиск по всем локациям</option>
+          <option value="">Пошук по всіх локаціях</option>
         </select>
 
-        <label for="warehouseSelect">Выберите склад:</label>
+        <label for="warehouseSelect">Виберіть склад:</label>
         <select id="warehouseSelect" onchange="enableLoadButton()" disabled>
-          <option value="">Выберите склад</option>
+          <option value="">Виберіть склад</option>
         </select>
 
         <div
           id="errorMessage"
           style="display: none; color: red; margin: 10px 0"
         ></div>
-        <button id="loadButton" onclick="loadData()">Загрузить данные</button>
-        <button onclick="exportToExcel()">Экспортировать в Excel</button>
-        <button onclick="exportToPDF()">Экспортировать в PDF</button>
-        <button onclick="handleLogout()" class="logout-btn">Выйти</button>
+        <button id="loadButton" onclick="loadData()">Завантажити дані</button>
+        <button onclick="exportToExcel()">Експортувати в Excel</button>
+        <button onclick="exportToPDF()">Експортувати до PDF</button>
+        <button onclick="handleLogout()" class="logout-btn">Вийти</button>
 
         <div id="result" class="table-container"></div>
       </div>
