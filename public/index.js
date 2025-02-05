@@ -20,7 +20,7 @@ async function handleLogin() {
     console.log("Отправка данных для входа:", { email, password });
 
     const response = await fetch(
-      "http://product-movement.onrender.com/api/login",
+      "https://product-movement.onrender.com/api/login",
       {
         method: "POST",
         headers: {
@@ -31,7 +31,7 @@ async function handleLogin() {
     );
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`https error! status: ${response.status}`);
     }
 
     const data = await response.json();
@@ -281,25 +281,28 @@ async function loadData() {
     // Выполняем оба запроса параллельно
     const [flowResponse, entityResponse, employeeResponse] = await Promise.all([
       // Первый запрос - goods-flow-items
-      fetch("http://product-movement.onrender.com/api/proxy/goods-flow-items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sort: {},
-          page: 1,
-          take: 50,
-          pageSize: 50,
-          skip: 0,
-          startDate: 0,
-          endDate: 1738073893133,
-          tz: "Europe/Kiev",
-          id: idInput,
-        }),
-      }),
+      fetch(
+        "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sort: {},
+            page: 1,
+            take: 50,
+            pageSize: 50,
+            skip: 0,
+            startDate: 0,
+            endDate: 1738073893133,
+            tz: "Europe/Kiev",
+            id: idInput,
+          }),
+        }
+      ),
       // Второй запрос - get-entity
-      fetch("http://product-movement.onrender.com/api/proxy/get-entity", {
+      fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -310,7 +313,7 @@ async function loadData() {
       }),
       // Третий запрос - get-employees-and-invites
       fetch(
-        "http://product-movement.onrender.com/api/proxy/get-employees-and-invites",
+        "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
         {
           method: "POST",
           headers: {
@@ -323,7 +326,7 @@ async function loadData() {
 
     if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
       throw new Error(
-        `HTTP error! status: ${
+        `https error! status: ${
           !flowResponse.ok
             ? flowResponse.status
             : !entityResponse.ok
