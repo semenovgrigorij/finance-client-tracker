@@ -19,13 +19,16 @@ async function handleLogin() {
 
     console.log("Отправка данных для входа:", { email, password });
 
-    const response = await fetch("http://localhost:3000/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    const response = await fetch(
+      "http://product-movement.onrender.com/api/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -278,7 +281,7 @@ async function loadData() {
     // Выполняем оба запроса параллельно
     const [flowResponse, entityResponse, employeeResponse] = await Promise.all([
       // Первый запрос - goods-flow-items
-      fetch("http://localhost:3000/api/proxy/goods-flow-items", {
+      fetch("http://product-movement.onrender.com/api/proxy/goods-flow-items", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -296,7 +299,7 @@ async function loadData() {
         }),
       }),
       // Второй запрос - get-entity
-      fetch("http://localhost:3000/api/proxy/get-entity", {
+      fetch("http://product-movement.onrender.com/api/proxy/get-entity", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -306,13 +309,16 @@ async function loadData() {
         }),
       }),
       // Третий запрос - get-employees-and-invites
-      fetch("http://localhost:3000/api/proxy/get-employees-and-invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      }),
+      fetch(
+        "http://product-movement.onrender.com/api/proxy/get-employees-and-invites",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        }
+      ),
     ]);
 
     if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
