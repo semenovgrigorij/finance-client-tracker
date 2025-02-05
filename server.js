@@ -133,7 +133,7 @@ async function getRemonlineCookiesForUser(email, password) {
   try {
     const browser = await puppeteer.launch({
       headless: "new",
-      args: ["--no-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
