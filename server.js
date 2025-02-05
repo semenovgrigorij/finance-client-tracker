@@ -49,7 +49,7 @@ app.post("/api/login", async (req, res) => {
     }
 
     console.log("Начало получения cookies");
-    const cookies = await getRemonlineCookies();
+    const cookies = await getRemonlineCookiesForUser(email, password);
     console.log("Статус получения cookies:", !!cookies);
 
     if (cookies) {
