@@ -75,7 +75,7 @@ async function getRemonlineCookies() {
     const browser = await puppeteer.launch({
       headless: "new",
       args: ["--no-sandbox"],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      executablePath: "/usr/bin/chromium", // Меняем путь на chromium
     });
 
     console.log("Создание новой страницы...");
