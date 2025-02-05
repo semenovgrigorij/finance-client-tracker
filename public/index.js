@@ -39,9 +39,6 @@ async function handleLogin() {
       loginError.style.display = "block";
       return;
     }
-    if (data.success) {
-      window.location.href = "/"; // или путь к основной странице
-    }
 
     if (response.ok) {
       loginForm.style.display = "none";
