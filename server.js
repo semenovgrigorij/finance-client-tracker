@@ -79,10 +79,7 @@ async function getRemonlineCookies() {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
       ],
-      executablePath:
-        process.env.NODE_ENV === "production"
-          ? "/usr/bin/google-chrome-stable" // путь к Chrome на Render
-          : undefined, // локальный путь по умолчанию
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
 
     console.log("Создание новой страницы...");

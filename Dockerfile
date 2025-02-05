@@ -1,6 +1,4 @@
-FROM ghcr.io/puppeteer/puppeteer:21.3.8
-
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
+FROM ghcr.io/puppeteer/puppeteer:latest
 
 WORKDIR /usr/src/app
 
