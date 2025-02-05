@@ -33,14 +33,24 @@ async function handleLogin() {
     }
 
     const data = await response.json();
-
+    // Проверяем статус ответа
+    if (response.status === 401) {
+      loginError.textContent = "Неправильный логин или пароль";
+      loginError.style.display = "block";
+      return;
+    }
     if (data.success) {
       window.location.href = "/"; // или путь к основной странице
     }
 
-    loginForm.style.display = "none";
-    mainContent.style.display = "block";
-    populateLocations();
+    if (response.ok) {
+      loginForm.style.display = "none";
+      mainContent.style.display = "block";
+      populateLocations();
+    } else {
+      loginError.textContent = data.error || "Ошибка входа";
+      loginError.style.display = "block";
+    }
   } catch (error) {
     console.error("Ошибка:", error);
     // Проверяем, является ли ошибка ответом 401
