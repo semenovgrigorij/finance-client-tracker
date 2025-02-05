@@ -1,11 +1,7 @@
-FROM node:16-slim
-
-RUN apt-get update \
-    && apt-get install -y chromium \
-    && rm -rf /var/lib/apt/lists/*
+FROM zenika/alpine-chrome:with-node
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /usr/src/app
 
