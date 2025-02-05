@@ -58,9 +58,6 @@ async function handleLogin() {
     }
     loginError.style.display = "block";
   } finally {
-    defaultText.style.display = "inline";
-    loadingText.style.display = "none";
-    loginButton.disabled = false;
     preloader.style.display = "none";
   }
 }
