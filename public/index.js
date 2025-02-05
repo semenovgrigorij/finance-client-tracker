@@ -1,6 +1,6 @@
 // Добавляем в начало файла index.js
 
-async function handleLogin() {
+async function handleLogin(email, password) {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   const loginError = document.getElementById("loginError");
@@ -36,21 +36,13 @@ async function handleLogin() {
 
     const data = await response.json();
 
-    // Проверяем статус ответа
-    if (response.status === 401) {
-      loginError.textContent = "Неправильный логин или пароль";
-      loginError.style.display = "block";
-      return;
+    if (data.success) {
+      window.location.href = "/"; // или путь к основной странице
     }
 
-    if (response.ok) {
-      loginForm.style.display = "none";
-      mainContent.style.display = "block";
-      populateLocations();
-    } else {
-      loginError.textContent = data.error || "Ошибка входа";
-      loginError.style.display = "block";
-    }
+    loginForm.style.display = "none";
+    mainContent.style.display = "block";
+    populateLocations();
   } catch (error) {
     console.error("Ошибка:", error);
     // Проверяем, является ли ошибка ответом 401
