@@ -67,6 +67,7 @@ app.post("/api/login", async (req, res) => {
 ////////////
 async function getRemonlineCookies() {
   try {
+    console.log("Запуск браузера...");
     const browser = await puppeteer.launch({
       headless: true, // изменено с false на true для продакшена
       args: [
@@ -85,37 +86,44 @@ async function getRemonlineCookies() {
           : undefined, // локальный путь по умолчанию
     });
 
+    console.log("Создание новой страницы...");
     const page = await browser.newPage();
 
     try {
+      console.log("Переход на страницу логина...");
       await page.goto("https://web.remonline.app/login", {
         waitUntil: "networkidle0",
-        timeout: 80000,
+        timeout: 120000,
       });
 
       // Используем найденные селекторы
+      console.log("Ввод учетных данных...");
       await page.type("#login", process.env.REMONLINE_EMAIL);
       await page.type("#password", process.env.REMONLINE_PASSWORD);
 
       // Клик по кнопке входа
+      console.log("Нажатие кнопки входа...");
       await page.click('button[type="submit"]');
 
       // Ожидание загрузки
+      console.log("Ожидание навигации...");
       await page.waitForNavigation({
         waitUntil: "networkidle0",
-        timeout: 30000,
+        timeout: 60000,
       });
 
       // Получение куки
+      console.log("Получение cookies...");
       const cookies = await page.cookies();
 
       console.log("Полученные куки:", cookies);
 
       await browser.close();
+      console.log("Браузер закрыт");
 
       return cookies;
     } catch (error) {
-      console.error("Детальная ошибка:", error);
+      console.error("Ошибка во время входа:", error);
       await browser.close();
       return null;
     }
