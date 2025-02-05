@@ -36,28 +36,32 @@ app.get("/", (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
+    console.log("Начало обработки логина");
     const { email, password } = req.body;
     console.log("Получены данные:", { email, password });
 
     if (!email || !password) {
+      console.log("Отсутствуют email или password");
       return res.status(400).json({
         error: "Email и пароль обязательны",
         details: { hasEmail: !!email, hasPassword: !!password },
       });
     }
 
-    // Получаем куки для конкретного пользователя
-    const cookies = await getRemonlineCookiesForUser(email, password);
-    console.log("Результат получения куков:", !!cookies);
+    console.log("Начало получения cookies");
+    const cookies = await getRemonlineCookies();
+    console.log("Статус получения cookies:", !!cookies);
 
     if (cookies) {
-      globalCookies = cookies; // Обновляем глобальные куки для текущей сессии
+      console.log("Cookies получены успешно");
+      globalCookies = cookies;
       res.json({ success: true });
     } else {
+      console.log("Не удалось получить cookies");
       res.status(401).json({ error: "Неверные учетные данные" });
     }
   } catch (error) {
-    console.error("Ошибка авторизации:", error);
+    console.error("Ошибка в роуте логина:", error);
     res.status(500).json({
       error: "Ошибка сервера при авторизации",
       details: error.message,
