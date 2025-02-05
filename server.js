@@ -8,6 +8,7 @@ require("dotenv").config();
 const app = express();
 let globalCookies = null;
 
+app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
@@ -29,6 +30,10 @@ app.use((req, res, next) => {
   next();
 });
 ///////////////
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
