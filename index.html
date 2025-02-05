@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Прокси API</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="wrapper">
+      <!-- Три точки -->
+      <div id="preloader" class="preloader" style="display: none">
+        <div class="spinner">
+          <div class="dot1"></div>
+          <div class="dot2"></div>
+          <div class="dot3"></div>
+        </div>
+      </div>
+      <!-- С вращающимся кругом -->
+      <!-- <div id="preloader" class="preloader" style="display: none">
+      <div class="spinner-circle"></div>
+    </div> -->
+      <!-- С пульсирующим кругом -->
+      <!-- <div id="preloader" class="preloader" style="display: none">
+      <div class="pulse"></div>
+    </div> -->
+      <form
+        id="loginForm"
+        onsubmit="handleLoginSubmit(event)"
+        class="login-container"
+      >
+        <h2>Вход в систему</h2>
+        <div class="form-group">
+          <label for="email">Логин или Email:</label>
+          <input type="email" id="email" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" required />
+        </div>
+        <!-- <button onclick="handleLogin()">Войти</button> -->
+        <button type="submit" id="loginButton">
+          <span class="default-text">Войти</span>
+          <span class="loading-text" style="display: none">
+            Выполняется вход...
+          </span>
+        </button>
+        <div
+          id="loginError"
+          style="color: red; margin-top: 10px; display: none"
+        ></div>
+      </form>
+
+      <div id="mainContent" style="display: none">
+        <h1>Тест API Remonline</h1>
+        <label for="idInput">Введите ID товара:</label>
+        <input type="text" id="idInput" onkeydown="handleKeyDown(event)" />
+
+        <label for="locationSelect">Выберите локацию:</label>
+        <select id="locationSelect" onchange="handleLocationChange()">
+          <option value="">Поиск по всем локациям</option>
+        </select>
+
+        <label for="warehouseSelect">Выберите склад:</label>
+        <select id="warehouseSelect" onchange="enableLoadButton()" disabled>
+          <option value="">Выберите склад</option>
+        </select>
+
+        <div
+          id="errorMessage"
+          style="display: none; color: red; margin: 10px 0"
+        ></div>
+        <button id="loadButton" onclick="loadData()">Загрузить данные</button>
+        <button onclick="exportToExcel()">Экспортировать в Excel</button>
+        <button onclick="exportToPDF()">Экспортировать в PDF</button>
+        <button onclick="handleLogout()" class="logout-btn">Выйти</button>
+
+        <div id="result" class="table-container"></div>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
+    <script src="./index.js"></script>
+  </body>
+</html>

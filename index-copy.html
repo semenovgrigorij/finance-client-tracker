@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Прокси API</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <h1>Тест API Remonline</h1>
+    <label for="idInput">Введите ID товара:</label>
+    <input type="text" id="idInput" onkeydown="handleKeyDown(event)" />
+
+    <label for="locationSelect">Выберите локацию:</label>
+    <select id="locationSelect" onchange="handleLocationChange()">
+      <option value="">Поиск по всем локациям</option>
+    </select>
+
+    <label for="warehouseSelect">Выберите склад:</label>
+    <select id="warehouseSelect" onchange="enableLoadButton()" disabled>
+      <option value="">Выберите склад</option>
+    </select>
+    <div
+      id="errorMessage"
+      style="display: none; color: red; margin: 10px 0"
+    ></div>
+    <button id="loadButton" onclick="loadData()">Загрузить данные</button>
+    <button onclick="exportToExcel()">Экспортировать в Excel</button>
+    <button onclick="exportToPDF()">Экспортировать в PDF</button>
+
+    <div id="result" class="table-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
+    <script src="./index.js"></script>
+  </body>
+</html>
