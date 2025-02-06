@@ -329,19 +329,20 @@ button:disabled {
 }
 /* Пагинанация */
 
-.pagination {
+.pagination-container {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
 }
 
-.pagination button {
-  padding: 5px 10px;
+.pagination-container button {
+  padding: 0.5rem 1rem;
   cursor: pointer;
 }
 
-.pagination button:disabled {
+.pagination-container button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

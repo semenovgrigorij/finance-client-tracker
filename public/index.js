@@ -1,20 +1,6 @@
 let currentPage = 1;
 let totalPages = 1;
 
-function changePage(direction) {
-  console.log("Текущая страница до:", currentPage);
-  if (direction === "prev" && currentPage > 1) {
-    currentPage--;
-    loadData(currentPage);
-  } else if (direction === "next" && currentPage < totalPages) {
-    currentPage++;
-  }
-  console.log("Текущая страница после:", currentPage);
-  console.log("Всего страниц:", totalPages);
-
-  loadData(currentPage);
-}
-
 function handleKeyDown(event) {
   if (event.key === "Enter") {
     loadData();
@@ -367,15 +353,6 @@ async function loadData(page = 1) {
       employeeResponse.json(),
     ]);
 
-    // Обновляем пагинацию
-    if (flowData.data) {
-      totalPages = Math.ceil(flowData.count / 50); // Используем count вместо total
-      document.getElementById("currentPage").textContent = currentPage;
-      document.getElementById("totalPages").textContent = totalPages;
-      document.getElementById("prevPage").disabled = currentPage <= 1;
-      document.getElementById("nextPage").disabled = currentPage >= totalPages;
-    }
-
     console.log("ОТВЕТ flowData:", flowData);
     console.log("ОТВЕТ entityData:", entityData);
     console.log("ОТВЕТ employeesData:", employeesData);
@@ -409,27 +386,27 @@ async function loadData(page = 1) {
 
     // Создаем таблицу
     let tableHTML = `
-    <div class="entity-info">
-    <div class="product-header">
-      <div class="product-image">
-        ${
-          entityData.image
-            ? `<img src="${entityData.image}" alt="Зображення товару" onerror="handleImageError(this)">`
-            : `<img src="./img/GCAR_LOGO.png">`
-        }
+    <div class="pagination-container">
+        <button id="prevPage" onclick="changePage('prev')">&larr;</button>
+        <span>Страница <span id="currentPage">1</span> из <span id="totalPages">1</span></span>
+        <button id="nextPage" onclick="changePage('next')">&rarr;</button>
       </div>
-      <div class="product-details">
-        <h3>Товар:</h3>
-        <p>ID: ${entityData.id || "-"}</p>
-        <p>Назва: ${entityData.title || "-"}</p>
+    <div class="entity-info">
+      <div class="product-header">
+        <div class="product-image">
+          ${
+            entityData.image
+              ? `<img src="${entityData.image}" alt="Зображення товару" onerror="handleImageError(this)">`
+              : `<img src="./img/GCAR_LOGO.png">`
+          }
+        </div>
+        <div class="product-details">
+          <h3>Товар:</h3>
+          <p>ID: ${entityData.id || "-"}</p>
+          <p>Назва: ${entityData.title || "-"}</p>
+        </div>
       </div>
     </div>
-    <div class="pagination">
-    <button onclick="changePage('prev')" id="prevPage">←</button>
-    <span id="currentPage">1</span> / <span id="totalPages">1</span>
-    <button onclick="changePage('next')" id="nextPage">→</button>
-  </div>
-  </div>
       <table>
         <thead>
           <tr>
@@ -515,12 +492,41 @@ async function loadData(page = 1) {
     `;
 
     document.getElementById("result").innerHTML = tableHTML;
+
+    // Обновляем пагинацию
+    if (flowData.data) {
+      totalPages = Math.ceil(flowData.count / 50);
+      const currentPageEl = document.getElementById("currentPage");
+      const totalPagesEl = document.getElementById("totalPages");
+      const prevPageBtn = document.getElementById("prevPage");
+      const nextPageBtn = document.getElementById("nextPage");
+
+      if (currentPageEl) currentPageEl.textContent = currentPage;
+      if (totalPagesEl) totalPagesEl.textContent = totalPages;
+      if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+      if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+    }
   } catch (error) {
     console.error("Помилка:", error);
     document.getElementById(
       "result"
     ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
   }
+}
+
+function changePage(direction) {
+  console.log("Текущая страница до:", currentPage);
+  console.log("Всего страниц:", totalPages);
+
+  if (direction === "prev" && currentPage > 1) {
+    currentPage--;
+    loadData(currentPage);
+  } else if (direction === "next" && currentPage < totalPages) {
+    currentPage++;
+    loadData(currentPage);
+  }
+
+  console.log("Текущая страница после:", currentPage);
 }
 
 function exportToExcel() {

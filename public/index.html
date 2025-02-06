@@ -81,7 +81,16 @@
       <button onclick="exportToExcel()">Експортувати в Excel</button>
       <button onclick="exportToPDF()">Експортувати до PDF</button>
       <button onclick="handleLogout()" class="logout-btn">Вийти</button>
-      <div id="result" class="table-container"></div>
+      <div id="result" class="table-container">
+        <div class="pagination-container">
+          <button id="prevPage" onclick="changePage('prev')">&larr;</button>
+          <span
+            >Страница <span id="currentPage">1</span> из
+            <span id="totalPages">1</span></span
+          >
+          <button id="nextPage" onclick="changePage('next')">&rarr;</button>
+        </div>
+      </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
