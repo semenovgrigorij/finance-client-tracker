@@ -7,6 +7,31 @@ require("dotenv").config();
 const sessions = new Map();
 
 const app = express();
+
+const corsOptions = {
+  origin: true, // Разрешаем все origins в dev режиме
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+};
+
+app.use(cors(corsOptions));
+
+// Добавляем middleware для обработки preflight запросов
+app.options("*", cors(corsOptions));
+
+// Добавляем middleware для установки необходимых заголовков
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
+  next();
+});
 let globalCookies = null;
 
 app.use(express.static("public"));
@@ -62,33 +87,34 @@ app.post("/api/login", async (req, res) => {
     console.log("Статус получения cookies:", !!cookies);
 
     if (cookies) {
-      // Проверяем, есть ли уже активная сессия для этого пользователя
-      if (sessions.has(email)) {
-        const existingSession = sessions.get(email);
-        // Если сессия существует и отличается от текущей
-        if (existingSession !== cookies[0].value) {
-          sessions.delete(email);
-          return res.status(401).json({
-            error: "session_expired",
-            message: "Виявлено вхід з іншого пристрою",
-          });
-        }
-      }
-      // Сохраняем новую сессию
-      sessions.set(email, cookies[0].value);
-
       console.log("Cookies получены успешно");
       globalCookies = cookies;
-      res.json({ success: true });
+      // Настраиваем куки в ответе
+      cookies.forEach((cookie) => {
+        res.cookie(cookie.name, cookie.value, {
+          maxAge: 24 * 60 * 60 * 1000, // 24 часа
+          httpOnly: true,
+          secure: true,
+          sameSite: "None",
+        });
+      });
+      // Отправляем успешный ответ
+      res.json({
+        success: true,
+        message: "Авторизация успешна",
+      });
     } else {
       console.log("Не удалось получить cookies");
-      res.status(401).json({ error: "Неверные учетные данные" });
+      res
+        .status(401)
+        .json({ error: "Неверные учетные данные", success: false });
     }
   } catch (error) {
     console.error("Ошибка в роуте логина:", error);
     res.status(500).json({
       error: "Ошибка сервера при авторизации",
       details: error.message,
+      success: false,
     });
   }
 });
@@ -201,47 +227,51 @@ async function getRemonlineCookiesForUser(email, password) {
   try {
     const browser = await puppeteer.launch({
       headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+      ],
     });
 
     const page = await browser.newPage();
 
     try {
+      await page.setViewport({ width: 1280, height: 800 });
+
+      console.log("Переход на страницу логина...");
       await page.goto("https://web.remonline.app/login", {
         waitUntil: "networkidle0",
-        timeout: 80000,
+        timeout: 60000,
       });
 
-      // Вводим данные
+      console.log("Ввод учетных данных...");
       await page.type("#login", email);
       await page.type("#password", password);
 
-      // Клик по кнопке входа
-      await page.click('button[type="submit"]');
+      console.log("Нажатие кнопки входа...");
+      await Promise.all([
+        page.click('button[type="submit"]'),
+        page.waitForNavigation({ waitUntil: "networkidle0", timeout: 60000 }),
+      ]);
 
-      try {
-        // Ждем успешной навигации или появления сообщения об ошибке
-        await Promise.race([
-          page.waitForNavigation({ timeout: 30000 }),
-          page.waitForSelector(".error-message", { timeout: 30000 }),
-        ]);
-
-        // Проверяем, есть ли сообщение об ошибке
-        const errorElement = await page.$(".error-message");
-        if (errorElement) {
-          await browser.close();
-          return null;
-        }
-
-        // Получаем куки
-        const cookies = await page.cookies();
-        await browser.close();
-        return cookies;
-      } catch (error) {
-        console.error("Ошибка при ожидании навигации:", error);
+      // Проверяем наличие ошибки входа
+      const errorElement = await page.$(".error-message");
+      if (errorElement) {
+        console.log("Обнаружена ошибка входа");
         await browser.close();
         return null;
       }
+
+      console.log("Получение cookies...");
+      const cookies = await page.cookies();
+
+      await browser.close();
+      console.log("Браузер закрыт, cookies получены");
+
+      return cookies;
     } catch (error) {
       console.error("Ошибка при работе с браузером:", error);
       await browser.close();

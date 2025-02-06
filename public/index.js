@@ -25,6 +25,7 @@ async function handleLogin() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       }
     );
 
@@ -33,22 +34,18 @@ async function handleLogin() {
     }
 
     const data = await response.json();
+    console.log("Server response:", response.status, data);
+
+    // Проверяем статус ответа
+    if (response.status === 401) {
+      loginError.textContent = "Неправильний логін або пароль";
+      loginError.style.display = "block";
+      return;
+    }
+
     if (!response.ok) {
-      // Проверяем тип ошибки
-      if (response.status === 401 && data.error === "session_expired") {
-        // Показываем модальное окно с сообщением о другой сессии
-        showSessionExpiredModal();
-        return;
-      }
       throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
-    // // Проверяем статус ответа
-    // if (response.status === 401) {
-    //   loginError.textContent = "Неправильний логін або пароль";
-    //   loginError.style.display = "block";
-    //   return;
-    // }
-
     // if (response.ok) {
     //   loginForm.style.display = "none";
     //   mainContent.style.display = "block";
