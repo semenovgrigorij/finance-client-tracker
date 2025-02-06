@@ -5,7 +5,7 @@ async function handleLogin() {
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
   const loginButton = document.getElementById("loginButton");
-  const defaultText = loginButton.querySelector(".default-text");
+  // const defaultText = loginButton.querySelector(".default-text");
   // const loadingText = loginButton.querySelector(".loading-text");
   const preloader = document.getElementById("preloader");
 
