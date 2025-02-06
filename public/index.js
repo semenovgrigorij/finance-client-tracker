@@ -367,6 +367,15 @@ async function loadData(page = 1) {
       employeeResponse.json(),
     ]);
 
+    // Обновляем пагинацию
+    if (flowData.data) {
+      totalPages = Math.ceil(flowData.count / 50); // Используем count вместо total
+      document.getElementById("currentPage").textContent = currentPage;
+      document.getElementById("totalPages").textContent = totalPages;
+      document.getElementById("prevPage").disabled = currentPage <= 1;
+      document.getElementById("nextPage").disabled = currentPage >= totalPages;
+    }
+
     console.log("ОТВЕТ flowData:", flowData);
     console.log("ОТВЕТ entityData:", entityData);
     console.log("ОТВЕТ employeesData:", employeesData);
@@ -506,17 +515,6 @@ async function loadData(page = 1) {
     `;
 
     document.getElementById("result").innerHTML = tableHTML;
-
-    // Обновляем пагинацию
-    if (flowData.data) {
-      totalPages = Math.ceil(flowData.total / 50);
-      console.log("Получено записей:", flowData.total);
-      console.log("Всего страниц:", totalPages);
-      document.getElementById("currentPage").textContent = currentPage;
-      document.getElementById("totalPages").textContent = totalPages;
-      document.getElementById("prevPage").disabled = currentPage <= 1;
-      document.getElementById("nextPage").disabled = currentPage >= totalPages;
-    }
   } catch (error) {
     console.error("Помилка:", error);
     document.getElementById(
