@@ -254,6 +254,9 @@ function enableLoadButton() {
   console.log("Selected Warehouse ID:", selectedWarehouseId);
 }
 
+let currentPage = 1;
+let totalPages = 1;
+
 async function loadData() {
   const idInput = document.getElementById("idInput").value;
   const locationSelect = document.getElementById("locationSelect");
@@ -273,7 +276,7 @@ async function loadData() {
   }
 
   try {
-    // Выполняем оба запроса параллельно
+    // Выполняем три запроса параллельно
     const [flowResponse, entityResponse, employeeResponse] = await Promise.all([
       // Первый запрос - goods-flow-items
       fetch(
@@ -285,7 +288,7 @@ async function loadData() {
           },
           body: JSON.stringify({
             sort: {},
-            page: 1,
+            page: page,
             take: 50,
             pageSize: 50,
             skip: 0,
@@ -331,7 +334,7 @@ async function loadData() {
       );
     }
 
-    // Получаем данные из обоих ответов
+    // Получаем данные из трёх ответов
     const [flowData, entityData, employeesData] = await Promise.all([
       flowResponse.json(),
       entityResponse.json(),
@@ -386,6 +389,11 @@ async function loadData() {
         <p>Назва: ${entityData.title || "-"}</p>
       </div>
     </div>
+    <div class="pagination">
+    <button onclick="changePage('prev')" id="prevPage">←</button>
+    <span id="currentPage">1</span> / <span id="totalPages">1</span>
+    <button onclick="changePage('next')" id="nextPage">→</button>
+  </div>
   </div>
       <table>
         <thead>
@@ -472,6 +480,14 @@ async function loadData() {
     `;
 
     document.getElementById("result").innerHTML = tableHTML;
+
+    // Обновляем пагинацию
+    const totalItems = flowData.total || 0;
+    totalPages = Math.ceil(totalItems / 50);
+    document.getElementById("currentPage").textContent = page;
+    document.getElementById("totalPages").textContent = totalPages;
+    document.getElementById("prevPage").disabled = page === 1;
+    document.getElementById("nextPage").disabled = page === totalPages;
   } catch (error) {
     console.error("Помилка:", error);
     document.getElementById(
@@ -479,6 +495,16 @@ async function loadData() {
     ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
   }
 }
+
+function changePage(direction) {
+  if (direction === "prev" && currentPage > 1) {
+    currentPage--;
+  } else if (direction === "next" && currentPage < totalPages) {
+    currentPage++;
+  }
+  loadData(currentPage);
+}
+
 function handleKeyDown(event) {
   if (event.key === "Enter") {
     loadData();

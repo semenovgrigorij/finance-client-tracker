@@ -200,9 +200,10 @@ const formatCookies = (cookies) => {
 
 app.post("/api/proxy/goods-flow-items", async (req, res) => {
   try {
+    const { id, page = 1 } = req.body;
     console.log("Входящие данные:", req.body);
-    const { id } = req.body; // Извлекаем значение id из тела запроса
-    // console.log("Глобальные куки:", globalCookies);,
+    // const { id } = req.body;
+
     console.log("Куки:", formatCookies(globalCookies));
 
     const csrfToken = globalCookies.find((c) => c.name === "csrftoken")?.value;
@@ -218,8 +219,9 @@ app.post("/api/proxy/goods-flow-items", async (req, res) => {
     }
     ///////////
     const response = await axios.post(
-      "https://web.remonline.app/app/warehouse/get-goods-flow-items?page=1&pageSize=50&id=${id}&startDate=0&endDate=1738073893133",
-      req.body,
+      "https://web.remonline.app/app/warehouse/get-goods-flow-items?page=${page}&pageSize=50&id=${id}&startDate=0&endDate=1738073893133",
+      // req.body,
+      { ...req.body, page, id },
       {
         headers: {
           Cookie: formatCookies(globalCookies),
