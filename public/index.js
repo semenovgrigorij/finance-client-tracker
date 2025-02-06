@@ -6,13 +6,13 @@ async function handleLogin() {
   const mainContent = document.getElementById("mainContent");
   const loginButton = document.getElementById("loginButton");
   const defaultText = loginButton.querySelector(".default-text");
-  const loadingText = loginButton.querySelector(".loading-text");
+  // const loadingText = loginButton.querySelector(".loading-text");
   const preloader = document.getElementById("preloader");
 
   try {
     preloader.style.display = "flex";
     defaultText.style.display = "none";
-    loadingText.style.display = "inline";
+    // loadingText.style.display = "inline";
     loginButton.disabled = true;
 
     console.log("Отправка данных для входа:", { email, password });
