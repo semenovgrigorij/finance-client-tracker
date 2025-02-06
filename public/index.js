@@ -11,7 +11,7 @@ async function handleLogin() {
 
   try {
     preloader.style.display = "flex";
-    defaultText.style.display = "none";
+    // defaultText.style.display = "none";
     // loadingText.style.display = "inline";
     loginButton.disabled = true;
 
