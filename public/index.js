@@ -35,7 +35,7 @@ async function handleLogin() {
     const data = await response.json();
     // Проверяем статус ответа
     if (response.status === 401) {
-      loginError.textContent = "Неправильный логин или пароль";
+      loginError.textContent = "Неправильний логін або пароль";
       loginError.style.display = "block";
       return;
     }
@@ -45,16 +45,16 @@ async function handleLogin() {
       mainContent.style.display = "block";
       populateLocations();
     } else {
-      loginError.textContent = data.error || "Ошибка входа";
+      loginError.textContent = data.error || "Помилка входу";
       loginError.style.display = "block";
     }
   } catch (error) {
     console.error("Ошибка:", error);
     // Проверяем, является ли ошибка ответом 401
     if (error.message.includes("401")) {
-      loginError.textContent = "Неправильный логин или пароль";
+      loginError.textContent = "Неправильний логін або пароль";
     } else {
-      loginError.textContent = "Произошла ошибка при подключении к серверу";
+      loginError.textContent = "Виникла помилка при підключенні до сервера";
     }
     loginError.style.display = "block";
   } finally {
@@ -176,12 +176,12 @@ const warehouses = {
 };
 
 const documentTypes = {
-  0: "Заказ",
-  1: "Продажа",
-  3: "Оприходование",
-  4: "Списание",
-  5: "Перемещение",
-  7: "Возврат поставщику",
+  0: "Замовлення",
+  1: "Продаж",
+  3: "Оприбуткування",
+  4: "Списання",
+  5: "Переміщення",
+  7: "Повернення постачальнику",
 };
 
 function handleImageError(img) {
@@ -201,7 +201,7 @@ function populateLocations() {
 
 function populateWarehouses(branchId) {
   const warehouseSelect = document.getElementById("warehouseSelect");
-  warehouseSelect.innerHTML = '<option value="">Выберите склад</option>';
+  warehouseSelect.innerHTML = '<option value="">Виберіть склад</option>';
   if (branchId && warehouses[branchId]) {
     warehouses[branchId].forEach((warehouse) => {
       const option = document.createElement("option");
@@ -230,7 +230,7 @@ function handleLocationChange() {
   } else {
     // Если локация выбрана, требуем выбор склада
     loadButton.disabled = true;
-    if (errorDiv) errorDiv.innerHTML = "Выберете, пожалуйста, склад";
+    if (errorDiv) errorDiv.innerHTML = "Виберіть, будь ласка, склад";
     if (errorDiv) errorDiv.style.display = "block";
   }
 
@@ -254,7 +254,7 @@ function enableLoadButton() {
   // Если локация выбрана, но склад не выбран, деактивируем кнопку
   else if (selectedLocationId !== "") {
     loadButton.disabled = true;
-    if (errorDiv) errorDiv.innerHTML = "Выберете, пожалуйста, склад";
+    if (errorDiv) errorDiv.innerHTML = "Виберіть, будь ласка, склад";
     if (errorDiv) errorDiv.style.display = "block";
   }
 
@@ -275,7 +275,7 @@ async function loadData() {
   if (!idInput) {
     document.getElementById(
       "result"
-    ).innerHTML = `<p style="color: red;">Ошибка: Пожалуйста, введите ID товара.</p>`;
+    ).innerHTML = `<p style="color: red;">Помилка: Будь ласка, введіть ID товару.</p>`;
     return;
   }
 
@@ -326,6 +326,14 @@ async function loadData() {
       ),
     ]);
 
+    // Проверяем каждый ответ на ошибку сессии
+    const responses = [flowResponse, entityResponse, employeeResponse];
+    for (const response of responses) {
+      if (!(await checkResponse(response))) {
+        return; // Прерываем выполнение если сессия истекла
+      }
+    }
+
     if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
       throw new Error(
         `https error! status: ${
@@ -371,7 +379,7 @@ async function loadData() {
       if (filteredData.length === 0) {
         document.getElementById(
           "result"
-        ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
+        ).innerHTML = `<p style="color: red;">Інформація щодо цього складу для даного товару відсутня</p>`;
         return;
       }
     }
@@ -383,7 +391,7 @@ async function loadData() {
       <div class="product-image">
         ${
           entityData.image
-            ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
+            ? `<img src="${entityData.image}" alt="Зображення товару" onerror="handleImageError(this)">`
             : `<img src="./img/GCAR_LOGO.png">`
         }
       </div>
@@ -400,12 +408,12 @@ async function loadData() {
             <th>Дата</th>
             <th>Номер документа</th>
             <th>Тип документа</th>
-            <th>Кто создал</th>
+            <th>Хто створив</th>
             <th>Склад (ID)</th>
             <th>Контрагент (ID)</th>
-            <th>Приход</th>
-            <th>Расход</th>
-            <th>Остаток</th>
+            <th>Надходження</th>
+            <th>Витрата</th>
+            <th>Залишок</th>
           </tr>
         </thead>
         <tbody>
@@ -480,10 +488,10 @@ async function loadData() {
 
     document.getElementById("result").innerHTML = tableHTML;
   } catch (error) {
-    console.error("Ошибка:", error);
+    console.error("Помилка:", error);
     document.getElementById(
       "result"
-    ).innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+    ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
   }
 }
 function handleKeyDown(event) {
@@ -493,7 +501,14 @@ function handleKeyDown(event) {
 }
 function exportToExcel() {
   const ws = XLSX.utils.aoa_to_sheet([
-    ["Дата", "Номер документа", "Кто создал", "Контрагент", "Приход", "Расход"],
+    [
+      "Дата",
+      "Номер документа",
+      "Хто створив",
+      "Контрагент",
+      "Надходження",
+      "Витрата",
+    ],
     ...tableData,
   ]);
   const wb = XLSX.utils.book_new();
@@ -514,10 +529,10 @@ function exportToPDF() {
       [
         "Дата",
         "Номер документа",
-        "Кто создал",
+        "Хто створив",
         "Контрагент",
-        "Приход",
-        "Расход",
+        "Надходження",
+        "Витрата",
       ],
     ],
     body: tableData,
@@ -549,4 +564,34 @@ function handleLoginSubmit(event) {
   event.preventDefault();
   // Вызываем функцию входа
   handleLogin();
+}
+
+// Функция для показа модального окна
+function showSessionExpiredModal() {
+  const modal = document.getElementById("sessionExpiredModal");
+  modal.style.display = "block";
+  // Очищаем основной контент
+  document.getElementById("mainContent").style.display = "none";
+}
+
+// Функция для повторной авторизации
+function reloginUser() {
+  const modal = document.getElementById("sessionExpiredModal");
+  modal.style.display = "none";
+  document.getElementById("loginForm").style.display = "block";
+  // Очищаем поля формы
+  document.getElementById("email").value = "";
+  document.getElementById("password").value = "";
+}
+
+// Модифицируем существующую функцию проверки ответа сервера
+async function checkResponse(response) {
+  if (response.status === 401) {
+    const data = await response.json();
+    if (data.error === "session_expired") {
+      showSessionExpiredModal();
+      return false;
+    }
+  }
+  return true;
 }

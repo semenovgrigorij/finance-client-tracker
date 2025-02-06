@@ -4,6 +4,7 @@ const cors = require("cors");
 const axios = require("axios");
 const cron = require("node-cron");
 require("dotenv").config();
+const sessions = new Map();
 
 const app = express();
 let globalCookies = null;
@@ -43,7 +44,7 @@ app.post("/api/login", async (req, res) => {
     if (!email || !password) {
       console.log("Отсутствуют email или password");
       return res.status(400).json({
-        error: "Email и пароль обязательны",
+        error: "Email та пароль обов'язкові",
         details: { hasEmail: !!email, hasPassword: !!password },
       });
     }
@@ -53,6 +54,21 @@ app.post("/api/login", async (req, res) => {
     console.log("Статус получения cookies:", !!cookies);
 
     if (cookies) {
+      // Проверяем, есть ли уже активная сессия для этого пользователя
+      if (sessions.has(email)) {
+        const existingSession = sessions.get(email);
+        // Если сессия существует и отличается от текущей
+        if (existingSession !== cookies[0].value) {
+          sessions.delete(email);
+          return res.status(401).json({
+            error: "session_expired",
+            message: "Виявлено вхід з іншого пристрою",
+          });
+        }
+      }
+      // Сохраняем новую сессию
+      sessions.set(email, cookies[0].value);
+
       console.log("Cookies получены успешно");
       globalCookies = cookies;
       res.json({ success: true });
@@ -68,6 +84,30 @@ app.post("/api/login", async (req, res) => {
     });
   }
 });
+
+// Добавляем middleware для проверки сессии
+const checkSession = (req, res, next) => {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) {
+    return res.status(401).json({
+      error: "session_expired",
+      message: "Сесія застаріла",
+    });
+  }
+
+  // Проверяем валидность сессии
+  const token = cookieHeader
+    .split(";")
+    .find((c) => c.trim().startsWith("token="));
+  if (!token) {
+    return res.status(401).json({
+      error: "session_expired",
+      message: "Сесія застаріла",
+    });
+  }
+
+  next();
+};
 ////////////
 async function getRemonlineCookies() {
   try {
@@ -198,7 +238,7 @@ const formatCookies = (cookies) => {
   return formattedCookies.join("; ");
 };
 
-app.post("/api/proxy/goods-flow-items", async (req, res) => {
+app.post("/api/proxy/goods-flow-items", checkSession, async (req, res) => {
   try {
     console.log("Входящие данные:", req.body);
     const { id } = req.body; // Извлекаем значение id из тела запроса
@@ -266,7 +306,7 @@ app.post("/api/proxy/goods-flow-items", async (req, res) => {
 
 app.options("/api/proxy/goods - flow - items;", cors());
 
-app.post("/api/proxy/get-entity", async (req, res) => {
+app.post("/api/proxy/get-entity", checkSession, async (req, res) => {
   try {
     console.log("Входящие данные get-entity:", req.body);
     const { id } = req.body;
@@ -335,71 +375,77 @@ app.post("/api/proxy/get-entity", async (req, res) => {
 
 app.options("/api/proxy/get-entity", cors());
 
-app.post("/api/proxy/get-employees-and-invites", async (req, res) => {
-  try {
-    console.log("Входящие данные get-employees-and-invites:", req.body);
-    console.log("Куки:", formatCookies(globalCookies));
+app.post(
+  "/api/proxy/get-employees-and-invites",
+  checkSession,
+  async (req, res) => {
+    try {
+      console.log("Входящие данные get-employees-and-invites:", req.body);
+      console.log("Куки:", formatCookies(globalCookies));
 
-    const csrfToken = globalCookies.find((c) => c.name === "csrftoken")?.value;
-    console.log("CSRF токен:", csrfToken);
+      const csrfToken = globalCookies.find(
+        (c) => c.name === "csrftoken"
+      )?.value;
+      console.log("CSRF токен:", csrfToken);
 
-    if (!csrfToken) {
-      console.error("CSRF-токен не найден");
-      return res.status(400).json({ error: "CSRF-токен не найден" });
-    }
-
-    if (!req.body) {
-      return res.status(400).json({ error: "Отсутствуют данные в запросе" });
-    }
-
-    const response = await axios.post(
-      "https://web.remonline.app/app/settings/get-employees-and-invites",
-      {},
-      {
-        headers: {
-          Cookie: formatCookies(globalCookies),
-          "x-csrftoken": csrfToken,
-          Referer: "https://web.remonline.app/settings/staff/employees/",
-          accept: "**",
-          "accept-encoding": "gzip, deflate, br, zstd",
-          "accept-language": "ru,en-US;q=0.9,en;q=0.8,uk;q=0.7,de;q=0.6",
-          "content-type": "application/json",
-          "x-branch-id": "",
-          "x-company-landing": "auto",
-          "x-company-niche-category": "auto",
-          "x-revision": "1.290.0",
-          "x-version": "1.290.0",
-          "sec-ch-ua":
-            '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-          "sec-ch-ua-mobile": "?0",
-          "sec-ch-ua-platform": '"Windows"',
-          "sec-fetch-dest": "empty",
-          "sec-fetch-mode": "cors",
-          "sec-fetch-site": "same-origin",
-          "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        },
+      if (!csrfToken) {
+        console.error("CSRF-токен не найден");
+        return res.status(400).json({ error: "CSRF-токен не найден" });
       }
-    );
 
-    console.log("Заголовки ответа Сотрудники:", response.headers);
-    console.log("Данные ответа Сотрудники:", response.data);
-    console.log("Статус запроса Сотрудники:", response.status);
+      if (!req.body) {
+        return res.status(400).json({ error: "Отсутствуют данные в запросе" });
+      }
 
-    res.json(response.data);
-  } catch (error) {
-    console.error("Ошибка проксирования get-employees-and-invites:", {
-      response: error.response?.data,
-      status: error.response?.status,
-      headers: error.response?.headers,
-      message: error.message,
-    });
-    res.status(error.response?.status || 500).json({
-      error: "Ошибка при проксировании запроса get-employees-and-invitesy",
-      details: error.response?.data,
-    });
+      const response = await axios.post(
+        "https://web.remonline.app/app/settings/get-employees-and-invites",
+        {},
+        {
+          headers: {
+            Cookie: formatCookies(globalCookies),
+            "x-csrftoken": csrfToken,
+            Referer: "https://web.remonline.app/settings/staff/employees/",
+            accept: "**",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "ru,en-US;q=0.9,en;q=0.8,uk;q=0.7,de;q=0.6",
+            "content-type": "application/json",
+            "x-branch-id": "",
+            "x-company-landing": "auto",
+            "x-company-niche-category": "auto",
+            "x-revision": "1.290.0",
+            "x-version": "1.290.0",
+            "sec-ch-ua":
+              '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
+            "user-agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          },
+        }
+      );
+
+      console.log("Заголовки ответа Сотрудники:", response.headers);
+      console.log("Данные ответа Сотрудники:", response.data);
+      console.log("Статус запроса Сотрудники:", response.status);
+
+      res.json(response.data);
+    } catch (error) {
+      console.error("Ошибка проксирования get-employees-and-invites:", {
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers,
+        message: error.message,
+      });
+      res.status(error.response?.status || 500).json({
+        error: "Ошибка при проксировании запроса get-employees-and-invitesy",
+        details: error.response?.data,
+      });
+    }
   }
-});
+);
 
 app.options("/api/proxy/get-employees-and-invites", cors());
 // Обновление куки каждый час
@@ -414,6 +460,8 @@ cron.schedule("0 * * * *", async () => {
       // Проверка обновления куков
       if (JSON.stringify(oldCookies) !== JSON.stringify(newCookies)) {
         console.log("Куки были изменены");
+        // Очищаем все сессии при обновлении куков
+        sessions.clear();
       } else {
         console.log("Куки остались без изменений");
       }

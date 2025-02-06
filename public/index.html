@@ -96,6 +96,19 @@
       <div id="result" class="table-container"></div>
     </div>
 
+    <div id="sessionExpiredModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h3>Помилка доступу</h3>
+        <p>
+          Під вашим обліковим записом був виконаний вхід з іншого браузера або
+          пристрою, тому поточна сесія користувача розірвана.
+        </p>
+        <button onclick="reloginUser()" class="modal-button">
+          Авторизуватись
+        </button>
+      </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
