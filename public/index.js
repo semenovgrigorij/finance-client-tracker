@@ -1,5 +1,5 @@
 // Утилита для работы с токенами
-const TokenManager = {
+window.TokenManager = {
   setTokens(tokens) {
     localStorage.setItem("auth_tokens", JSON.stringify(tokens));
   },
@@ -75,7 +75,79 @@ async function loadData() {
   }
 }
 
-function handleLogout() {
+window.handleLogin = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const loginError = document.getElementById("loginError");
+  const loginForm = document.getElementById("loginForm");
+  const mainContent = document.getElementById("mainContent");
+  const loginButton = document.getElementById("loginButton");
+  const defaultText = loginButton.querySelector(".default-text");
+  const loadingText = loginButton.querySelector(".loading-text");
+  const preloader = document.getElementById("preloader");
+
+  try {
+    preloader.style.display = "flex";
+    defaultText.style.display = "none";
+    loadingText.style.display = "inline";
+    loginButton.disabled = true;
+
+    const response = await fetch(
+      "https://product-movement.onrender.com/api/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      }
+    );
+
+    const data = await response.json();
+    console.log("Login response:", response.status, data);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        loginError.textContent = "Неправильний логін або пароль";
+      } else {
+        loginError.textContent = data.error || "Помилка входу";
+      }
+      loginError.style.display = "block";
+      return;
+    }
+
+    if (data.success) {
+      // Сохраняем токены если они пришли
+      if (data.tokens) {
+        TokenManager.setTokens(data.tokens);
+      }
+
+      loginForm.style.display = "none";
+      mainContent.style.display = "block";
+      loginError.style.display = "none";
+      populateLocations();
+    }
+  } catch (error) {
+    console.error("Помилка:", error);
+    loginError.textContent = "Помилка підключення до сервера";
+    loginError.style.display = "block";
+  } finally {
+    preloader.style.display = "none";
+    defaultText.style.display = "inline";
+    loadingText.style.display = "none";
+    loginButton.disabled = false;
+  }
+};
+
+// Делаем функцию handleLoginSubmit глобальной
+window.handleLoginSubmit = function (event) {
+  event.preventDefault();
+  handleLogin();
+};
+
+// Также делаем глобальными остальные используемые функции
+window.handleLogout = function () {
   TokenManager.clearTokens();
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
@@ -85,21 +157,13 @@ function handleLogout() {
   document.getElementById("password").value = "";
   document.getElementById("loginError").style.display = "none";
 
-  // Сбрасываем форму полностью
-  // loginForm.reset();
-
   // Показываем форму логина и скрываем основной контент
   loginForm.style.display = "block";
   mainContent.style.display = "none";
 
   // Очищаем результаты
   document.getElementById("result").innerHTML = "";
-
-  // Очищаем историю формы
-  // if (window.history.replaceState) {
-  //   window.history.replaceState({}, document.title, window.location.pathname);
-  // }
-}
+};
 
 let tableData = [];
 // Массив локаций
