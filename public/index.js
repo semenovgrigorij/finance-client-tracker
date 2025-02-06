@@ -1,3 +1,25 @@
+let currentPage = 1;
+let totalPages = 1;
+
+function changePage(direction) {
+  if (direction === "prev" && currentPage > 1) {
+    currentPage--;
+  } else if (direction === "next" && currentPage < totalPages) {
+    currentPage++;
+  }
+  loadData(currentPage);
+}
+
+function handleKeyDown(event) {
+  if (event.key === "Enter") {
+    loadData();
+  }
+}
+
+window.onload = function () {
+  document.getElementById("loadButton").onclick = () => loadData(1);
+  populateLocations(); // Перемещаем сюда инициализацию локаций
+};
 async function handleLogin() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -254,10 +276,8 @@ function enableLoadButton() {
   console.log("Selected Warehouse ID:", selectedWarehouseId);
 }
 
-let currentPage = 1;
-let totalPages = 1;
-
-async function loadData() {
+async function loadData(page = 1) {
+  currentPage = page; // Обновляем текущую страницу
   const idInput = document.getElementById("idInput").value;
   const locationSelect = document.getElementById("locationSelect");
   const warehouseSelect = document.getElementById("warehouseSelect");
@@ -496,20 +516,6 @@ async function loadData() {
   }
 }
 
-function changePage(direction) {
-  if (direction === "prev" && currentPage > 1) {
-    currentPage--;
-  } else if (direction === "next" && currentPage < totalPages) {
-    currentPage++;
-  }
-  loadData(currentPage);
-}
-
-function handleKeyDown(event) {
-  if (event.key === "Enter") {
-    loadData();
-  }
-}
 function exportToExcel() {
   const ws = XLSX.utils.aoa_to_sheet([
     [
