@@ -4,7 +4,7 @@ async function handleLogin() {
   const loginError = document.getElementById("loginError");
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
-  const loginButton = document.getElementById("loginButton");
+  // const loginButton = document.getElementById("loginButton");
   // const defaultText = loginButton.querySelector(".default-text");
   // const loadingText = loginButton.querySelector(".loading-text");
   const preloader = document.getElementById("preloader");
@@ -13,7 +13,7 @@ async function handleLogin() {
     preloader.style.display = "flex";
     // defaultText.style.display = "none";
     // loadingText.style.display = "inline";
-    loginButton.disabled = true;
+    // loginButton.disabled = true;
 
     console.log("Отправка данных для входа:", { email, password });
 
