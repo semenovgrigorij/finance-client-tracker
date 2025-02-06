@@ -545,13 +545,13 @@ function handleLoginSubmit(event) {
 
 function togglePassword() {
   const passwordInput = document.getElementById("password");
-  const eyeIcon = document.querySelector(".toggle-password");
+  const eyeIcon = document.querySelector(".eye-icon");
 
   if (passwordInput.type === "password") {
     passwordInput.type = "text";
-    eyeIcon.classList.add("password-visible");
+    eyeIcon.classList.add("hide");
   } else {
     passwordInput.type = "password";
-    eyeIcon.classList.remove("password-visible");
+    eyeIcon.classList.remove("hide");
   }
 }
