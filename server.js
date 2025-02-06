@@ -86,27 +86,47 @@ app.post("/api/login", async (req, res) => {
 });
 
 // Добавляем middleware для проверки сессии
-const checkSession = (req, res, next) => {
-  const cookieHeader = req.headers.cookie;
-  if (!cookieHeader) {
-    return res.status(401).json({
+const checkSession = async (req, res, next) => {
+  try {
+    const csrfToken = globalCookies?.find((c) => c.name === "csrftoken")?.value;
+
+    if (!globalCookies || !csrfToken) {
+      return res.status(401).json({
+        error: "session_expired",
+        message: "Сесія застаріла, необхідна повторна авторизація",
+      });
+    }
+
+    // Проверяем валидность куки через тестовый запрос к Remonline
+    try {
+      const testResponse = await axios.get(
+        "https://web.remonline.app/api/company/info",
+        {
+          headers: {
+            Cookie: formatCookies(globalCookies),
+            "x-csrftoken": csrfToken,
+          },
+        }
+      );
+
+      if (testResponse.status !== 200) {
+        throw new Error("Invalid session");
+      }
+    } catch (error) {
+      return res.status(401).json({
+        error: "session_expired",
+        message: "Сесія застаріла, необхідна повторна авторизація",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Session check error:", error);
+    res.status(401).json({
       error: "session_expired",
-      message: "Сесія застаріла",
+      message: "Помилка перевірки сесії",
     });
   }
-
-  // Проверяем валидность сессии
-  const token = cookieHeader
-    .split(";")
-    .find((c) => c.trim().startsWith("token="));
-  if (!token) {
-    return res.status(401).json({
-      error: "session_expired",
-      message: "Сесія застаріла",
-    });
-  }
-
-  next();
 };
 ////////////
 async function getRemonlineCookies() {

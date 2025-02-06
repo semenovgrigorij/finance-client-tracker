@@ -33,14 +33,31 @@ async function handleLogin() {
     }
 
     const data = await response.json();
-    // Проверяем статус ответа
-    if (response.status === 401) {
-      loginError.textContent = "Неправильний логін або пароль";
-      loginError.style.display = "block";
-      return;
+    if (!response.ok) {
+      // Проверяем тип ошибки
+      if (response.status === 401 && data.error === "session_expired") {
+        // Показываем модальное окно с сообщением о другой сессии
+        showSessionExpiredModal();
+        return;
+      }
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
+    // // Проверяем статус ответа
+    // if (response.status === 401) {
+    //   loginError.textContent = "Неправильний логін або пароль";
+    //   loginError.style.display = "block";
+    //   return;
+    // }
 
-    if (response.ok) {
+    // if (response.ok) {
+    //   loginForm.style.display = "none";
+    //   mainContent.style.display = "block";
+    //   populateLocations();
+    // } else {
+    //   loginError.textContent = data.error || "Помилка входу";
+    //   loginError.style.display = "block";
+    // }
+    if (data.success) {
       loginForm.style.display = "none";
       mainContent.style.display = "block";
       populateLocations();
@@ -50,15 +67,21 @@ async function handleLogin() {
     }
   } catch (error) {
     console.error("Ошибка:", error);
-    // Проверяем, является ли ошибка ответом 401
-    if (error.message.includes("401")) {
-      loginError.textContent = "Неправильний логін або пароль";
-    } else {
-      loginError.textContent = "Виникла помилка при підключенні до сервера";
-    }
+    // // Проверяем, является ли ошибка ответом 401
+    // if (error.message.includes("401")) {
+    //   loginError.textContent = "Неправильний логін або пароль";
+    // } else {
+    //   loginError.textContent = "Виникла помилка при підключенні до сервера";
+    // }
+    // loginError.style.display = "block";
+    loginError.textContent =
+      error.message || "Сталася помилка при підключенні до сервера";
     loginError.style.display = "block";
   } finally {
     preloader.style.display = "none";
+    defaultText.style.display = "inline";
+    loadingText.style.display = "none";
+    loginButton.disabled = false;
   }
 }
 
@@ -280,10 +303,44 @@ async function loadData() {
   }
 
   try {
-    // Выполняем оба запроса параллельно
-    const [flowResponse, entityResponse, employeeResponse] = await Promise.all([
+    // Выполняем первый запрос и проверяем его отдельно
+    const flowResponse = await fetch(
+      "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sort: {},
+          page: 1,
+          take: 50,
+          pageSize: 50,
+          skip: 0,
+          startDate: 0,
+          endDate: 1738073893133,
+          tz: "Europe/Kiev",
+          id: idInput,
+        }),
+      }
+    );
+
+    // Проверяем ответ на ошибки авторизации
+    if (flowResponse.status === 401) {
+      const errorData = await flowResponse.json();
+      if (errorData.error === "session_expired") {
+        showSessionExpiredModal();
+        return;
+      }
+    }
+
+    if (!flowResponse.ok) {
+      throw new Error(`HTTP error! status: ${flowResponse.status}`);
+    }
+    // Выполняем три запроса параллельно
+    const [entityResponse, employeeResponse] = await Promise.all([
       // Первый запрос - goods-flow-items
-      fetch(
+      /*  fetch(
         "https://product-movement.onrender.com/api/proxy/goods-flow-items",
         {
           method: "POST",
@@ -302,7 +359,7 @@ async function loadData() {
             id: idInput,
           }),
         }
-      ),
+      ), */
       // Второй запрос - get-entity
       fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
         method: "POST",
@@ -326,15 +383,29 @@ async function loadData() {
       ),
     ]);
 
-    // Проверяем каждый ответ на ошибку сессии
+    /* // Проверяем каждый ответ на ошибку сессии
     const responses = [flowResponse, entityResponse, employeeResponse];
     for (const response of responses) {
       if (!(await checkResponse(response))) {
         return; // Прерываем выполнение если сессия истекла
       }
-    }
+    } */
 
-    if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
+    // Проверяем остальные ответы
+    if (entityResponse.status === 401 || employeeResponse.status === 401) {
+      const errorData = await (entityResponse.status === 401
+        ? entityResponse
+        : employeeResponse
+      ).json();
+      if (errorData.error === "session_expired") {
+        showSessionExpiredModal();
+        return;
+      }
+    }
+    if (!entityResponse.ok || !employeeResponse.ok) {
+      throw new Error("Ошибка при получении данных");
+    }
+    /* if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
       throw new Error(
         `https error! status: ${
           !flowResponse.ok
@@ -344,9 +415,9 @@ async function loadData() {
             : employeeResponse.status
         }`
       );
-    }
+    } */
 
-    // Получаем данные из обоих ответов
+    // Получаем данные из трёх ответов
     const [flowData, entityData, employeesData] = await Promise.all([
       flowResponse.json(),
       entityResponse.json(),
