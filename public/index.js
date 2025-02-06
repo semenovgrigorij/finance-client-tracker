@@ -375,15 +375,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return true;
   }
 
-  // Обработка нажатия Enter в поле ввода
-  window.handleKeyDown = function (event) {
-    if (event.key === "Enter") {
-      loadData();
-    }
-  };
-
-  // Загрузка данных
-  window.loadData = async function () {
+  async function loadData() {
     const idInput = document.getElementById("idInput").value;
     const locationSelect = document.getElementById("locationSelect");
     const warehouseSelect = document.getElementById("warehouseSelect");
@@ -393,6 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (errorDiv) errorDiv.style.display = "none";
 
+    // Проверка на наличие значения в поле ввода
     if (!idInput) {
       document.getElementById(
         "result"
@@ -401,78 +394,136 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     try {
-      const [flowResponse, entityResponse, employeeResponse] =
-        await Promise.all([
-          fetch(
-            "https://product-movement.onrender.com/api/proxy/goods-flow-items",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify({
-                sort: {},
-                page: 1,
-                take: 50,
-                pageSize: 50,
-                skip: 0,
-                startDate: 0,
-                endDate: 1738073893133,
-                tz: "Europe/Kiev",
-                id: idInput,
-              }),
-            }
-          ),
-          fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
+      // Выполняем первый запрос и проверяем его отдельно
+      const flowResponse = await fetch(
+        "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sort: {},
+            page: 1,
+            take: 50,
+            pageSize: 50,
+            skip: 0,
+            startDate: 0,
+            endDate: 1738073893133,
+            tz: "Europe/Kiev",
+            id: idInput,
+          }),
+        }
+      );
+
+      // Проверяем статус ответа
+      if (response.status === 401) {
+        const data = await response.json();
+        if (data.error === "session_expired") {
+          showSessionExpiredModal();
+          return;
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const sessionValid = await checkSessionStatus(flowResponse);
+      if (!sessionValid) {
+        return;
+      }
+
+      if (!flowResponse.ok) {
+        throw new Error(`Помилка запиту: ${flowResponse.status}`);
+      }
+      // Выполняем три запроса параллельно
+      const [entityResponse, employeeResponse] = await Promise.all([
+        // Первый запрос - goods-flow-items
+        /*  fetch(
+        "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sort: {},
+            page: 1,
+            take: 50,
+            pageSize: 50,
+            skip: 0,
+            startDate: 0,
+            endDate: 1738073893133,
+            tz: "Europe/Kiev",
+            id: idInput,
+          }),
+        }
+      ), */
+        // Второй запрос - get-entity
+        fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: idInput,
+          }),
+        }),
+        // Третий запрос - get-employees-and-invites
+        fetch(
+          "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
+          {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            credentials: "include",
-            body: JSON.stringify({
-              id: idInput,
-            }),
-          }),
-          fetch(
-            "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify({}),
-            }
-          ),
-        ]);
-
-      // Проверяем статус каждого ответа
-      for (const response of [flowResponse, entityResponse, employeeResponse]) {
-        if (response.status === 401) {
-          const data = await response.json();
-          if (data.error === "session_expired") {
-            showSessionExpiredModal();
-            return;
+            body: JSON.stringify({}),
           }
-        }
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      }
+        ),
+      ]);
 
-      // Получаем данные из всех ответов
+      /* // Проверяем каждый ответ на ошибку сессии
+    const responses = [flowResponse, entityResponse, employeeResponse];
+    for (const response of responses) {
+      if (!(await checkResponse(response))) {
+        return; // Прерываем выполнение если сессия истекла
+      }
+    } */
+
+      // Проверяем статусы всех ответов
+      const entitySessionValid = await checkSessionStatus(entityResponse);
+      const employeeSessionValid = await checkSessionStatus(employeeResponse);
+
+      if (!entitySessionValid || !employeeSessionValid) {
+        return;
+      }
+      /* if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
+      throw new Error(
+        `https error! status: ${
+          !flowResponse.ok
+            ? flowResponse.status
+            : !entityResponse.ok
+            ? entityResponse.status
+            : employeeResponse.status
+        }`
+      );
+    } */
+
+      // Получаем данные из трёх ответов
       const [flowData, entityData, employeesData] = await Promise.all([
         flowResponse.json(),
         entityResponse.json(),
         employeeResponse.json(),
       ]);
 
-      console.log("Flow Data:", flowData);
-      console.log("Entity Data:", entityData);
-      console.log("Employees Data:", employeesData);
+      console.log("ОТВЕТ flowData:", flowData);
+      console.log("ОТВЕТ entityData:", entityData);
+      console.log("ОТВЕТ employeesData:", employeesData);
 
-      // Создаем мапу сотрудников
+      // Создаем мапу сотрудников для быстрого поиска
       const employeesMap = {};
       if (employeesData.data) {
         employeesData.data.forEach((employee) => {
@@ -494,29 +545,29 @@ document.addEventListener("DOMContentLoaded", function () {
         if (filteredData.length === 0) {
           document.getElementById(
             "result"
-          ).innerHTML = `<p style="color: red;">Інформація по цьому складу для даного товару відсутня</p>`;
+          ).innerHTML = `<p style="color: red;">Інформація щодо цього складу для даного товару відсутня</p>`;
           return;
         }
       }
 
       // Создаем таблицу
       let tableHTML = `
-      <div class="entity-info">
-        <div class="product-header">
-          <div class="product-image">
-            ${
-              entityData.image
-                ? `<img src="${entityData.image}" alt="Зображення товару" onerror="handleImageError(this)">`
-                : `<img src="./img/GCAR_LOGO.png">`
-            }
-          </div>
-          <div class="product-details">
-            <h3>Товар:</h3>
-            <p>ID: ${entityData.id || "-"}</p>
-            <p>Назва: ${entityData.title || "-"}</p>
-          </div>
-        </div>
+    <div class="entity-info">
+    <div class="product-header">
+      <div class="product-image">
+        ${
+          entityData.image
+            ? `<img src="${entityData.image}" alt="Зображення товару" onerror="handleImageError(this)">`
+            : `<img src="./img/GCAR_LOGO.png">`
+        }
       </div>
+      <div class="product-details">
+        <h3>Товар:</h3>
+        <p>ID: ${entityData.id || "-"}</p>
+        <p>Название: ${entityData.title || "-"}</p>
+      </div>
+    </div>
+  </div>
       <table>
         <thead>
           <tr>
@@ -526,29 +577,41 @@ document.addEventListener("DOMContentLoaded", function () {
             <th>Хто створив</th>
             <th>Склад (ID)</th>
             <th>Контрагент (ID)</th>
-            <th>Прихід</th>
-            <th>Розхід</th>
+            <th>Надходження</th>
+            <th>Витрата</th>
             <th>Залишок</th>
           </tr>
         </thead>
         <tbody>
     `;
 
-      // Добавляем строки в таблицу
+      // Добавляем данные в таблицу и рассчитываем остаток
       let balance = 0;
-      const rows = filteredData.slice().reverse();
+      const rows = filteredData.slice().reverse(); // Реверсируем массив для вычисления снизу вверх
 
       rows.forEach((item, index) => {
         const income = item.income !== undefined ? parseFloat(item.income) : 0;
         const outcome =
           item.outcome !== undefined ? parseFloat(item.outcome) : 0;
+        const clientInfo = `${item.client_name || "-"} (${
+          item.client_id || "-"
+        })`;
+        const warehouseInfo = `${item.warehouse_title || "-"} (${
+          item.warehouse_id || "-"
+        })`;
         const relationType = parseInt(item.relation_type, 10);
         const documentType = documentTypes[relationType] || "-";
+        const employeesMap = {};
+        if (employeesData.data) {
+          employeesData.data.forEach((employee) => {
+            employeesMap[employee.id] =
+              employee.counterparty?.fullname || employee.login || "-";
+          });
+        }
         const employeeName =
           employeesMap[item.employee_id] || item.employee_id || "-";
-
         const dateStr = item.created_at
-          ? new Date(item.created_at).toLocaleString("uk-UA", {
+          ? new Date(item.created_at).toLocaleString("ru-RU", {
               year: "numeric",
               month: "2-digit",
               day: "2-digit",
@@ -563,8 +626,8 @@ document.addEventListener("DOMContentLoaded", function () {
           dateStr,
           item.relation_id_label || "-",
           employeeName,
-          `${item.warehouse_title || "-"} (${item.warehouse_id || "-"})`,
-          `${item.client_name || "-"} (${item.client_id || "-"})`,
+          warehouseInfo,
+          clientInfo,
           item.income !== undefined ? item.income : "-",
           item.outcome !== undefined ? item.outcome : "-",
           balance.toString(),
@@ -572,12 +635,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         tableHTML += `
         <tr>
-          <td>${dateStr}</td>
+            <td>${dateStr}</td>
           <td>${item.relation_id_label || "-"}</td>
           <td>${documentType}</td>
           <td>${employeeName}</td>
-          <td>${item.warehouse_title || "-"} (${item.warehouse_id || "-"})</td>
-          <td>${item.client_name || "-"} (${item.client_id || "-"})</td>
+          <td>${warehouseInfo}</td>
+          <td>${clientInfo}</td>
           <td>${item.income !== undefined ? item.income : "-"}</td>
           <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
           <td>${balance}</td>
@@ -597,7 +660,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "result"
       ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
     }
-  };
+  }
   function handleKeyDown(event) {
     if (event.key === "Enter") {
       loadData();
