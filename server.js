@@ -70,6 +70,93 @@ app.get("/", (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
+    const { email, password } = req.body;
+    console.log("Получены данные:", { email });
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: "Email и пароль обязательны",
+      });
+    }
+
+    const cookies = await getRemonlineCookiesForUser(email, password);
+
+    if (cookies) {
+      // Проверяем, есть ли уже активная сессия для этого пользователя
+      if (activeSessions.has(email)) {
+        const existingSession = activeSessions.get(email);
+        // Если токен отличается от текущего, значит был вход с другого устройства
+        if (
+          existingSession !== cookies.find((c) => c.name === "token")?.value
+        ) {
+          return res.status(401).json({
+            error: "session_expired",
+            message: "Виявлено вхід з іншого пристрою",
+          });
+        }
+      }
+
+      // Сохраняем новую сессию
+      const tokenCookie = cookies.find((c) => c.name === "token");
+      if (tokenCookie) {
+        activeSessions.set(email, tokenCookie.value);
+      }
+
+      globalCookies = cookies;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Неверные учетные данные" });
+    }
+  } catch (error) {
+    console.error("Ошибка в роуте логина:", error);
+    res.status(500).json({
+      error: "Ошибка сервера при авторизации",
+      details: error.message,
+    });
+  }
+});
+
+// Модифицируем middleware проверки сессии
+const checkSession = async (req, res, next) => {
+  try {
+    if (!globalCookies) {
+      return res.status(401).json({
+        error: "session_expired",
+        message: "Сесія застаріла",
+      });
+    }
+
+    const tokenCookie = globalCookies.find((c) => c.name === "token");
+    if (tokenCookie) {
+      // Проверяем, активна ли сессия
+      let sessionFound = false;
+      for (let [email, token] of activeSessions.entries()) {
+        if (token === tokenCookie.value) {
+          sessionFound = true;
+          break;
+        }
+      }
+
+      if (!sessionFound) {
+        return res.status(401).json({
+          error: "session_expired",
+          message: "Виявлено вхід з іншого пристрою",
+        });
+      }
+    }
+
+    next();
+  } catch (error) {
+    console.error("Session check error:", error);
+    res.status(401).json({
+      error: "session_expired",
+      message: "Помилка перевірки сесії",
+    });
+  }
+};
+
+/* app.post("/api/login", async (req, res) => {
+  try {
     console.log("Начало обработки логина");
     const { email, password } = req.body;
 
@@ -82,6 +169,7 @@ app.post("/api/login", async (req, res) => {
     const cookies = await getRemonlineCookiesForUser(email, password);
 
     if (cookies) {
+      
       // Сохраняем куки глобально
       globalCookies = cookies;
 
@@ -149,7 +237,7 @@ app.post("/api/login", async (req, res) => {
       details: error.message,
     });
   }
-});
+}); */
 
 // Добавляем middleware для проверки сессии
 const checkSession = async (req, res, next) => {

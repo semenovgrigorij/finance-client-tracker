@@ -342,6 +342,39 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("Selected Warehouse ID:", selectedWarehouseId);
   }
 
+  function reloginUser() {
+    const modal = document.getElementById("sessionExpiredModal");
+    const loginForm = document.getElementById("loginForm");
+
+    // Скрываем модальное окно
+    modal.style.display = "none";
+
+    // Очищаем поля формы
+    document.getElementById("email").value = "";
+    document.getElementById("password").value = "";
+    document.getElementById("loginError").style.display = "none";
+
+    // Показываем форму логина
+    loginForm.style.display = "block";
+
+    // Очищаем результаты
+    document.getElementById("result").innerHTML = "";
+  }
+
+  // Добавим функцию для проверки статуса сессии
+  function checkSessionStatus(response) {
+    if (response.status === 401) {
+      return response.json().then((data) => {
+        if (data.error === "session_expired") {
+          showSessionExpiredModal();
+          return false;
+        }
+        return true;
+      });
+    }
+    return true;
+  }
+
   async function loadData() {
     const idInput = document.getElementById("idInput").value;
     const locationSelect = document.getElementById("locationSelect");
@@ -382,6 +415,21 @@ document.addEventListener("DOMContentLoaded", function () {
           }),
         }
       );
+
+      // Проверяем статус ответа
+      if (response.status === 401) {
+        const data = await response.json();
+        if (data.error === "session_expired") {
+          showSessionExpiredModal();
+          return;
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       const sessionValid = await checkSessionStatus(flowResponse);
       if (!sessionValid) {
@@ -677,54 +725,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Инициализация выпадающих списков
   populateLocations();
-
-  function handleLoginSubmit(event) {
-    // Предотвращаем стандартное поведение формы
-    event.preventDefault();
-    // Вызываем функцию входа
-    handleLogin();
-  }
-
-  // Функция для показа модального окна
   function showSessionExpiredModal() {
     const modal = document.getElementById("sessionExpiredModal");
-    modal.style.display = "block";
-    // Очищаем основной контент
-    document.getElementById("mainContent").style.display = "none";
-  }
-
-  // Функция для повторной авторизации
-  function reloginUser() {
-    const modal = document.getElementById("sessionExpiredModal");
-    modal.style.display = "none";
-
-    // Очищаем все данные сессии
-    const loginForm = document.getElementById("loginForm");
     const mainContent = document.getElementById("mainContent");
-
-    loginForm.style.display = "block";
+    modal.style.display = "block";
     mainContent.style.display = "none";
-
-    // Очищаем поля формы
-    document.getElementById("email").value = "";
-    document.getElementById("password").value = "";
-    document.getElementById("loginError").style.display = "none";
-
-    // Очищаем результаты
-    document.getElementById("result").innerHTML = "";
-  }
-
-  // Добавим функцию для проверки статуса сессии
-  function checkSessionStatus(response) {
-    if (response.status === 401) {
-      return response.json().then((data) => {
-        if (data.error === "session_expired") {
-          showSessionExpiredModal();
-          return false;
-        }
-        return true;
-      });
-    }
-    return true;
+    console.log("Показываю модальное окно сессии");
   }
 });
