@@ -4,10 +4,11 @@ let totalPages = 1;
 function changePage(direction) {
   if (direction === "prev" && currentPage > 1) {
     currentPage--;
+    loadData(currentPage);
   } else if (direction === "next" && currentPage < totalPages) {
     currentPage++;
+    loadData(currentPage);
   }
-  loadData(currentPage);
 }
 
 function handleKeyDown(event) {
@@ -277,7 +278,7 @@ function enableLoadButton() {
 }
 
 async function loadData(page = 1) {
-  currentPage = page; // Обновляем текущую страницу
+  currentPage = page;
   const idInput = document.getElementById("idInput").value;
   const locationSelect = document.getElementById("locationSelect");
   const warehouseSelect = document.getElementById("warehouseSelect");
@@ -502,12 +503,13 @@ async function loadData(page = 1) {
     document.getElementById("result").innerHTML = tableHTML;
 
     // Обновляем пагинацию
-    const totalItems = flowData.total || 0;
-    totalPages = Math.ceil(totalItems / 50);
-    document.getElementById("currentPage").textContent = page;
-    document.getElementById("totalPages").textContent = totalPages;
-    document.getElementById("prevPage").disabled = page === 1;
-    document.getElementById("nextPage").disabled = page === totalPages;
+    if (flowData.data) {
+      totalPages = Math.ceil(flowData.total / 50);
+      document.getElementById("currentPage").textContent = currentPage;
+      document.getElementById("totalPages").textContent = totalPages;
+      document.getElementById("prevPage").disabled = currentPage <= 1;
+      document.getElementById("nextPage").disabled = currentPage >= totalPages;
+    }
   } catch (error) {
     console.error("Помилка:", error);
     document.getElementById(
