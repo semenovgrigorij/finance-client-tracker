@@ -1,3 +1,31 @@
+// Функция для получения CSRF токена из куки
+function getCsrfToken() {
+  const name = "csrftoken=";
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const cookieArray = decodedCookie.split(";");
+  for (let i = 0; i < cookieArray.length; i++) {
+    let cookie = cookieArray[i].trim();
+    if (cookie.indexOf(name) === 0) {
+      return cookie.substring(name.length, cookie.length);
+    }
+  }
+  return "";
+}
+
+// Функция для получения CSRF токена из куки
+function getCsrfToken() {
+  const name = "csrftoken=";
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const cookieArray = decodedCookie.split(";");
+  for (let i = 0; i < cookieArray.length; i++) {
+    let cookie = cookieArray[i].trim();
+    if (cookie.indexOf(name) === 0) {
+      return cookie.substring(name.length, cookie.length);
+    }
+  }
+  return "";
+}
+
 async function handleLogin() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -15,8 +43,6 @@ async function handleLogin() {
     loadingText.style.display = "inline";
     loginButton.disabled = true;
 
-    console.log("Отправка данных для входа:", { email, password });
-
     const response = await fetch(
       "https://product-movement.onrender.com/api/login",
       {
@@ -29,56 +55,77 @@ async function handleLogin() {
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`https error! status: ${response.status}`);
-    }
-
     const data = await response.json();
-    console.log("Server response:", response.status, data);
+    console.log("Login response:", response.status, data);
 
-    // Проверяем статус ответа
-    if (response.status === 401) {
-      loginError.textContent = "Неправильний логін або пароль";
+    if (!response.ok) {
+      if (response.status === 401) {
+        loginError.textContent = "Неправильний логін або пароль";
+      } else {
+        loginError.textContent = data.error || "Помилка входу";
+      }
       loginError.style.display = "block";
       return;
     }
 
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
-    }
-    // if (response.ok) {
-    //   loginForm.style.display = "none";
-    //   mainContent.style.display = "block";
-    //   populateLocations();
-    // } else {
-    //   loginError.textContent = data.error || "Помилка входу";
-    //   loginError.style.display = "block";
-    // }
     if (data.success) {
+      // Сохраняем csrfToken если он пришел в ответе
+      if (data.csrfToken) {
+        localStorage.setItem("csrfToken", data.csrfToken);
+      }
+
       loginForm.style.display = "none";
       mainContent.style.display = "block";
+      loginError.style.display = "none";
       populateLocations();
-    } else {
-      loginError.textContent = data.error || "Помилка входу";
-      loginError.style.display = "block";
     }
   } catch (error) {
-    console.error("Ошибка:", error);
-    // // Проверяем, является ли ошибка ответом 401
-    // if (error.message.includes("401")) {
-    //   loginError.textContent = "Неправильний логін або пароль";
-    // } else {
-    //   loginError.textContent = "Виникла помилка при підключенні до сервера";
-    // }
-    // loginError.style.display = "block";
-    loginError.textContent =
-      error.message || "Сталася помилка при підключенні до сервера";
+    console.error("Помилка:", error);
+    loginError.textContent = "Помилка підключення до сервера";
     loginError.style.display = "block";
   } finally {
     preloader.style.display = "none";
     defaultText.style.display = "inline";
     loadingText.style.display = "none";
     loginButton.disabled = false;
+  }
+}
+
+// Модифицируем функцию loadData для использования сохраненного CSRF токена
+async function loadData() {
+  const idInput = document.getElementById("idInput").value;
+  const csrfToken = localStorage.getItem("csrfToken") || getCsrfToken();
+
+  try {
+    const response = await fetch(
+      "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          sort: {},
+          page: 1,
+          take: 50,
+          pageSize: 50,
+          skip: 0,
+          startDate: 0,
+          endDate: 1738073893133,
+          tz: "Europe/Kiev",
+          id: idInput,
+        }),
+      }
+    );
+
+    // Остальной код обработки ответа...
+  } catch (error) {
+    console.error("Помилка:", error);
+    document.getElementById(
+      "result"
+    ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
   }
 }
 

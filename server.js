@@ -72,49 +72,66 @@ app.post("/api/login", async (req, res) => {
   try {
     console.log("Начало обработки логина");
     const { email, password } = req.body;
-    console.log("Получены данные:", { email, password });
 
     if (!email || !password) {
-      console.log("Отсутствуют email или password");
       return res.status(400).json({
-        error: "Email та пароль обов'язкові",
-        details: { hasEmail: !!email, hasPassword: !!password },
+        error: "Email и пароль обязательны",
       });
     }
 
-    console.log("Начало получения cookies");
     const cookies = await getRemonlineCookiesForUser(email, password);
-    console.log("Статус получения cookies:", !!cookies);
 
     if (cookies) {
-      console.log("Cookies получены успешно");
+      // Сохраняем куки глобально
       globalCookies = cookies;
-      // Настраиваем куки в ответе
-      cookies.forEach((cookie) => {
-        res.cookie(cookie.name, cookie.value, {
-          maxAge: 24 * 60 * 60 * 1000, // 24 часа
-          httpOnly: true,
-          secure: true,
-          sameSite: "None",
-        });
+
+      // Находим необходимые куки
+      const tokenCookie = cookies.find((c) => c.name === "token");
+      const refreshTokenCookie = cookies.find(
+        (c) => c.name === "refresh_token"
+      );
+      const csrfTokenCookie = cookies.find((c) => c.name === "csrftoken");
+
+      if (!tokenCookie || !refreshTokenCookie || !csrfTokenCookie) {
+        console.error("Missing required cookies");
+        return res.status(500).json({ error: "Authentication error" });
+      }
+
+      // Устанавливаем куки в ответ
+      res.cookie("token", tokenCookie.value, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
       });
+
+      res.cookie("refresh_token", refreshTokenCookie.value, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
+      res.cookie("csrftoken", csrfTokenCookie.value, {
+        httpOnly: false,
+        secure: true,
+        sameSite: "Lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
       // Отправляем успешный ответ
       res.json({
         success: true,
-        message: "Авторизация успешна",
+        csrfToken: csrfTokenCookie.value, // Отправляем csrfToken в теле ответа
       });
     } else {
-      console.log("Не удалось получить cookies");
-      res
-        .status(401)
-        .json({ error: "Неверные учетные данные", success: false });
+      res.status(401).json({ error: "Неверные учетные данные" });
     }
   } catch (error) {
     console.error("Ошибка в роуте логина:", error);
     res.status(500).json({
       error: "Ошибка сервера при авторизации",
       details: error.message,
-      success: false,
     });
   }
 });
@@ -122,12 +139,20 @@ app.post("/api/login", async (req, res) => {
 // Добавляем middleware для проверки сессии
 const checkSession = async (req, res, next) => {
   try {
-    const csrfToken = globalCookies?.find((c) => c.name === "csrftoken")?.value;
-
-    if (!globalCookies || !csrfToken) {
+    if (!globalCookies) {
       return res.status(401).json({
         error: "session_expired",
-        message: "Сесія застаріла, необхідна повторна авторизація",
+        message: "Сесія застаріла",
+      });
+    }
+
+    const tokenCookie = globalCookies.find((c) => c.name === "token");
+    const csrfToken = globalCookies.find((c) => c.name === "csrftoken")?.value;
+
+    if (!tokenCookie || !csrfToken) {
+      return res.status(401).json({
+        error: "session_expired",
+        message: "Отсутствуют необходимые куки",
       });
     }
 
@@ -146,18 +171,26 @@ const checkSession = async (req, res, next) => {
       if (testResponse.status !== 200) {
         throw new Error("Invalid session");
       }
-    } catch (error) {
-      return res.status(401).json({
-        error: "session_expired",
-        message: "Сесія застаріла, необхідна повторна авторизація",
-      });
-    }
+      // Добавляем токены в запрос для использования в следующих middleware
+      req.tokens = {
+        csrfToken,
+        cookies: globalCookies,
+      };
 
-    next();
+      next();
+    } catch (error) {
+      if (error.response?.status === 401) {
+        return res.status(401).json({
+          error: "session_expired",
+          message: "Сесія застаріла, необхідна повторна авторизація",
+        });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error("Session check error:", error);
-    res.status(401).json({
-      error: "session_expired",
+    res.status(500).json({
+      error: "server_error",
       message: "Помилка перевірки сесії",
     });
   }
@@ -285,28 +318,30 @@ async function getRemonlineCookiesForUser(email, password) {
 
 const formatCookies = (cookies) => {
   if (!cookies || !Array.isArray(cookies)) {
-    console.error("Неверный формат cookies:", cookies);
+    console.error("Invalid cookies format:", cookies);
     return "";
   }
 
-  const relevantCookies = ["token", "refresh_token", "csrftoken"];
-  const formattedCookies = cookies
-    .filter((cookie) => {
-      if (!cookie || !cookie.name) {
-        console.error("Неверный формат cookie:", cookie);
-        return false;
-      }
-      return relevantCookies.includes(cookie.name);
-    })
-    .map((cookie) => `${cookie.name}=${cookie.value}`);
+  // Фильтруем только нужные куки и те, что относятся к домену web.remonline.app
+  const relevantCookies = cookies.filter(
+    (cookie) =>
+      (cookie.name === "token" ||
+        cookie.name === "refresh_token" ||
+        cookie.name === "csrftoken") &&
+      cookie.domain.includes("remonline.app")
+  );
 
-  if (formattedCookies.length === 0) {
-    console.error("Не найдены необходимые cookies");
+  if (relevantCookies.length === 0) {
+    console.error("No relevant cookies found");
     return "";
   }
 
-  console.log("Форматированные cookies:", formattedCookies.join("; "));
-  return formattedCookies.join("; ");
+  const cookieString = relevantCookies
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+
+  console.log("Formatted cookies:", cookieString);
+  return cookieString;
 };
 
 app.post("/api/proxy/goods-flow-items", checkSession, async (req, res) => {
