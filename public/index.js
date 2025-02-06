@@ -382,7 +382,7 @@ async function loadData() {
       <div class="product-details">
         <h3>Товар:</h3>
         <p>ID: ${entityData.id || "-"}</p>
-        <p>Название: ${entityData.title || "-"}</p>
+        <p>Назва: ${entityData.title || "-"}</p>
       </div>
     </div>
   </div>
