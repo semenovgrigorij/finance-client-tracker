@@ -3,12 +3,21 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const cron = require("node-cron");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
 let globalCookies = null;
 
-app.use(express.static("public"));
+// app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+app.get("/favicon.ico", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "favicon.ico"));
+});
+app.use((req, res, next) => {
+  console.log("Request URL:", req.url);
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
