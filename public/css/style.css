@@ -126,7 +126,6 @@ tr:hover {
 select,
 input {
   padding: 8px;
-  margin: 5px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
@@ -213,7 +212,7 @@ label {
 }
 
 .form-group input {
-  width: 100%;
+  width: 95%;
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -311,7 +310,7 @@ button:disabled {
 
 .eye-icon {
   position: absolute;
-  right: 10px;
+  right: 5%;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
