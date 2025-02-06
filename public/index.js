@@ -4,16 +4,10 @@ async function handleLogin() {
   const loginError = document.getElementById("loginError");
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
-  // const loginButton = document.getElementById("loginButton");
-  // const defaultText = loginButton.querySelector(".default-text");
-  // const loadingText = loginButton.querySelector(".loading-text");
   const preloader = document.getElementById("preloader");
 
   try {
     preloader.style.display = "flex";
-    // defaultText.style.display = "none";
-    // loadingText.style.display = "inline";
-    // loginButton.disabled = true;
 
     console.log("Отправка данных для входа:", { email, password });
 
@@ -71,12 +65,19 @@ function handleLogout() {
   document.getElementById("password").value = "";
   document.getElementById("loginError").style.display = "none";
 
+  // Сбрасываем форму полностью
+  loginForm.reset();
+
   // Показываем форму логина и скрываем основной контент
   loginForm.style.display = "block";
   mainContent.style.display = "none";
 
   // Очищаем результаты
   document.getElementById("result").innerHTML = "";
+  // Очищаем историю формы
+  if (window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 let tableData = [];

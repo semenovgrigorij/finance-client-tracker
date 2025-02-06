@@ -23,6 +23,7 @@
       onsubmit="handleLoginSubmit(event)"
       autocomplete="off"
       class="login-container"
+      novalidate
     >
       <h2>Вхід у систему</h2>
       <div class="form-group">
@@ -32,6 +33,10 @@
           id="email"
           name="email"
           autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          readonly
+          onfocus="this.removeAttribute('readonly');"
           required
         />
       </div>
@@ -42,20 +47,15 @@
             type="password"
             id="password"
             name="password"
-            autocomplete="off"
+            autocomplete="new-password"
+            readonly
+            onfocus="this.removeAttribute('readonly');"
             required
           />
           <i class="eye-icon" onclick="togglePassword()"></i>
         </div>
       </div>
-      <!-- <button onclick="handleLogin()">Войти</button> -->
-      <button type="submit" id="loginButton">
-        Увійти
-        <!-- <span class="default-text">Увійти</span> -->
-        <!-- <span class="loading-text" style="display: none">
-          Виконується вхід...
-        </span> -->
-      </button>
+      <button type="submit" id="loginButton">Увійти</button>
       <div
         id="loginError"
         style="color: red; margin-top: 10px; display: none"
