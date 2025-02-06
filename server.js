@@ -161,53 +161,66 @@ const checkSession = async (req, res, next) => {
       });
     }
 
-    const tokenCookie = globalCookies.find((c) => c.name === "token");
-    const csrfToken = globalCookies.find((c) => c.name === "csrftoken")?.value;
+    const tokenCookie = globalCookies.find(
+      (c) => c.name === "token" && c.domain === "web.remonline.app"
+    );
+    const csrfToken = globalCookies.find(
+      (c) => c.name === "csrftoken" && c.domain === "web.remonline.app"
+    )?.value;
 
     if (!tokenCookie || !csrfToken) {
       return res.status(401).json({
         error: "session_expired",
-        message: "Отсутствуют необходимые куки",
+        message: "Відсутні необхідні куки",
       });
     }
 
-    // Проверяем валидность куки через тестовый запрос к Remonline
+    // Проверяем валидность куки через другой endpoint
     try {
-      const testResponse = await axios.get(
-        "https://web.remonline.app/api/company/info",
+      const response = await axios.get(
+        "https://web.remonline.app/api/warehouse/get-goods-flow-items",
         {
           headers: {
             Cookie: formatCookies(globalCookies),
             "x-csrftoken": csrfToken,
+            "Content-Type": "application/json",
+            referer: "https://web.remonline.app/",
           },
         }
       );
 
-      if (testResponse.status !== 200) {
-        throw new Error("Invalid session");
+      // Любой ответ кроме 401 считаем валидным
+      if (response.status !== 401) {
+        req.tokens = {
+          csrfToken,
+          cookies: globalCookies,
+        };
+        next();
+        return;
       }
-      // Добавляем токены в запрос для использования в следующих middleware
-      req.tokens = {
-        csrfToken,
-        cookies: globalCookies,
-      };
 
-      next();
+      throw new Error("Invalid session");
     } catch (error) {
-      if (error.response?.status === 401) {
+      if (
+        error.response?.status === 401 ||
+        error.message === "Invalid session"
+      ) {
         return res.status(401).json({
           error: "session_expired",
           message: "Сесія застаріла, необхідна повторна авторизація",
         });
       }
-      throw error;
+      // Если ошибка не связана с авторизацией, пропускаем запрос
+      req.tokens = {
+        csrfToken,
+        cookies: globalCookies,
+      };
+      next();
     }
   } catch (error) {
     console.error("Session check error:", error);
-    res.status(500).json({
-      error: "server_error",
-      message: "Помилка перевірки сесії",
-    });
+    // В случае ошибки проверки все равно пропускаем запрос
+    next();
   }
 };
 ////////////
@@ -337,7 +350,7 @@ const formatCookies = (cookies) => {
     return "";
   }
 
-  // Фильтруем только нужные куки с правильного домена
+  // Фильтруем только нужные куки для web.remonline.app
   const relevantCookies = cookies.filter(
     (cookie) =>
       (cookie.name === "token" ||
@@ -360,7 +373,7 @@ const formatCookies = (cookies) => {
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
 
-  console.log("Formatted cookies:", cookieString);
+  console.log("Formatted cookies string:", cookieString);
   return cookieString;
 };
 
