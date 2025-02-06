@@ -542,3 +542,16 @@ function handleLoginSubmit(event) {
   // Вызываем функцию входа
   handleLogin();
 }
+
+function togglePassword() {
+  const passwordInput = document.getElementById("password");
+  const eyeIcon = document.querySelector(".toggle-password");
+
+  if (passwordInput.type === "password") {
+    passwordInput.type = "text";
+    eyeIcon.classList.add("password-visible");
+  } else {
+    passwordInput.type = "password";
+    eyeIcon.classList.remove("password-visible");
+  }
+}
