@@ -27,6 +27,7 @@
       onsubmit="handleLoginSubmit(event)"
       autocomplete="off"
       class="login-container"
+      novalidate
     >
       <h2>Вхід у систему</h2>
       <div class="form-group">
@@ -36,6 +37,10 @@
           id="email"
           name="email"
           autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          readonly
+          onfocus="this.removeAttribute('readonly');"
           required
         />
       </div>
@@ -45,7 +50,9 @@
           type="password"
           id="password"
           name="password"
-          autocomplete="off"
+          autocomplete="new-password"
+          readonly
+          onfocus="this.removeAttribute('readonly');"
           required
         />
       </div>

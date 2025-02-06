@@ -71,12 +71,20 @@ function handleLogout() {
   document.getElementById("password").value = "";
   document.getElementById("loginError").style.display = "none";
 
+  // Сбрасываем форму полностью
+  loginForm.reset();
+
   // Показываем форму логина и скрываем основной контент
   loginForm.style.display = "block";
   mainContent.style.display = "none";
 
   // Очищаем результаты
   document.getElementById("result").innerHTML = "";
+
+  // Очищаем историю формы
+  if (window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 let tableData = [];
