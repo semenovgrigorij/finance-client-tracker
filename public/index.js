@@ -325,17 +325,13 @@ async function loadData() {
       }
     );
 
-    // Проверяем ответ на ошибки авторизации
-    if (flowResponse.status === 401) {
-      const errorData = await flowResponse.json();
-      if (errorData.error === "session_expired") {
-        showSessionExpiredModal();
-        return;
-      }
+    const sessionValid = await checkSessionStatus(flowResponse);
+    if (!sessionValid) {
+      return;
     }
 
     if (!flowResponse.ok) {
-      throw new Error(`HTTP error! status: ${flowResponse.status}`);
+      throw new Error(`Помилка запиту: ${flowResponse.status}`);
     }
     // Выполняем три запроса параллельно
     const [entityResponse, employeeResponse] = await Promise.all([
@@ -391,19 +387,12 @@ async function loadData() {
       }
     } */
 
-    // Проверяем остальные ответы
-    if (entityResponse.status === 401 || employeeResponse.status === 401) {
-      const errorData = await (entityResponse.status === 401
-        ? entityResponse
-        : employeeResponse
-      ).json();
-      if (errorData.error === "session_expired") {
-        showSessionExpiredModal();
-        return;
-      }
-    }
-    if (!entityResponse.ok || !employeeResponse.ok) {
-      throw new Error("Ошибка при получении данных");
+    // Проверяем статусы всех ответов
+    const entitySessionValid = await checkSessionStatus(entityResponse);
+    const employeeSessionValid = await checkSessionStatus(employeeResponse);
+
+    if (!entitySessionValid || !employeeSessionValid) {
+      return;
     }
     /* if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
       throw new Error(
@@ -649,20 +638,33 @@ function showSessionExpiredModal() {
 function reloginUser() {
   const modal = document.getElementById("sessionExpiredModal");
   modal.style.display = "none";
-  document.getElementById("loginForm").style.display = "block";
+
+  // Очищаем все данные сессии
+  const loginForm = document.getElementById("loginForm");
+  const mainContent = document.getElementById("mainContent");
+
+  loginForm.style.display = "block";
+  mainContent.style.display = "none";
+
   // Очищаем поля формы
   document.getElementById("email").value = "";
   document.getElementById("password").value = "";
+  document.getElementById("loginError").style.display = "none";
+
+  // Очищаем результаты
+  document.getElementById("result").innerHTML = "";
 }
 
-// Модифицируем существующую функцию проверки ответа сервера
-async function checkResponse(response) {
+// Добавим функцию для проверки статуса сессии
+function checkSessionStatus(response) {
   if (response.status === 401) {
-    const data = await response.json();
-    if (data.error === "session_expired") {
-      showSessionExpiredModal();
-      return false;
-    }
+    return response.json().then((data) => {
+      if (data.error === "session_expired") {
+        showSessionExpiredModal();
+        return false;
+      }
+      return true;
+    });
   }
   return true;
 }

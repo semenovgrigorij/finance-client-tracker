@@ -15,12 +15,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: "*", // Настройте для вашего домена
-    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+    credentials: true,
   })
 );
-
 app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
+  next();
+});
+/* app.use((req, res, next) => {
   res.setHeader(
     "Cache-Control",
     "no-store, no-cache, must-revalidate, proxy-revalidate"
@@ -29,7 +37,7 @@ app.use((req, res, next) => {
   res.setHeader("Expires", "0");
   res.setHeader("Surrogate-Control", "no-store");
   next();
-});
+}); */
 ///////////////
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -244,17 +252,30 @@ async function getRemonlineCookiesForUser(email, password) {
     return null;
   }
 }
+
 const formatCookies = (cookies) => {
-  if (!cookies) {
-    console.error("Куки не получены");
+  if (!cookies || !Array.isArray(cookies)) {
+    console.error("Неверный формат cookies:", cookies);
     return "";
   }
+
   const relevantCookies = ["token", "refresh_token", "csrftoken"];
   const formattedCookies = cookies
-    .filter((cookie) => relevantCookies.includes(cookie.name))
+    .filter((cookie) => {
+      if (!cookie || !cookie.name) {
+        console.error("Неверный формат cookie:", cookie);
+        return false;
+      }
+      return relevantCookies.includes(cookie.name);
+    })
     .map((cookie) => `${cookie.name}=${cookie.value}`);
 
-  console.log("Сформированные куки:", formattedCookies.join("; "));
+  if (formattedCookies.length === 0) {
+    console.error("Не найдены необходимые cookies");
+    return "";
+  }
+
+  console.log("Форматированные cookies:", formattedCookies.join("; "));
   return formattedCookies.join("; ");
 };
 
