@@ -304,8 +304,7 @@ button:disabled {
 }
 
 .password-input input {
-  width: 100%;
-  padding-right: 40px; /* Место для иконки */
+  width: 95%;
 }
 
 .eye-icon {
