@@ -19,27 +19,6 @@ const TokenManager = {
   },
 };
 
-// Утилита для работы с токенами
-const TokenManager = {
-  setTokens(tokens) {
-    localStorage.setItem("auth_tokens", JSON.stringify(tokens));
-  },
-
-  getTokens() {
-    const tokens = localStorage.getItem("auth_tokens");
-    return tokens ? JSON.parse(tokens) : null;
-  },
-
-  clearTokens() {
-    localStorage.removeItem("auth_tokens");
-  },
-
-  getCsrfToken() {
-    const tokens = this.getTokens();
-    return tokens?.csrfToken || "";
-  },
-};
-
 // Модифицируем функцию loadData для использования сохраненного CSRF токена
 async function loadData() {
   const idInput = document.getElementById("idInput").value;
