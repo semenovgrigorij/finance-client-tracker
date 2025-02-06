@@ -15,13 +15,9 @@
       </div>
     </div>
     <!-- С вращающимся кругом -->
-    <!-- <div id="preloader" class="preloader" style="display: none">
-      <div class="spinner-circle"></div>
-    </div> -->
+    <!-- <div id="preloader" class="preloader" style="display: none">       <div class="spinner-circle"></div>     </div> -->
     <!-- С пульсирующим кругом -->
-    <!-- <div id="preloader" class="preloader" style="display: none">
-      <div class="pulse"></div>
-    </div> -->
+    <!-- <div id="preloader" class="preloader" style="display: none">       <div class="pulse"></div>     </div> -->
     <form
       id="loginForm"
       onsubmit="handleLoginSubmit(event)"
@@ -36,10 +32,6 @@
           id="email"
           name="email"
           autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-          readonly
-          onfocus="this.removeAttribute('readonly');"
           required
         />
       </div>
@@ -49,9 +41,7 @@
           type="password"
           id="password"
           name="password"
-          autocomplete="new-password"
-          readonly
-          onfocus="this.removeAttribute('readonly');"
+          autocomplete="off"
           required
         />
       </div>
@@ -67,35 +57,18 @@
         style="color: red; margin-top: 10px; display: none"
       ></div>
     </form>
-
-    <div id="sessionExpiredModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <h3>Помилка доступу</h3>
-        <p>
-          Під вашим обліковим записом був виконаний вхід з іншого браузера або
-          пристрою, тому поточна сесія користувача розірвана.
-        </p>
-        <button onclick="reloginUser()" class="modal-button">
-          Авторизуватись
-        </button>
-      </div>
-    </div>
-
     <div id="mainContent" style="display: none">
       <h1>Історія руху товару</h1>
       <label for="idInput">Введіть ID товару:</label>
       <input type="text" id="idInput" onkeydown="handleKeyDown(event)" />
-
       <label for="locationSelect">Виберіть локацію:</label>
       <select id="locationSelect" onchange="handleLocationChange()">
         <option value="">Пошук по всіх локаціях</option>
       </select>
-
       <label for="warehouseSelect">Виберіть склад:</label>
       <select id="warehouseSelect" onchange="enableLoadButton()" disabled>
         <option value="">Виберіть склад</option>
       </select>
-
       <div
         id="errorMessage"
         style="display: none; color: red; margin: 10px 0"
@@ -104,10 +77,8 @@
       <button onclick="exportToExcel()">Експортувати в Excel</button>
       <button onclick="exportToPDF()">Експортувати до PDF</button>
       <button onclick="handleLogout()" class="logout-btn">Вийти</button>
-
       <div id="result" class="table-container"></div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
