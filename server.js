@@ -85,12 +85,16 @@ app.post("/api/login", async (req, res) => {
       // Сохраняем куки глобально
       globalCookies = cookies;
 
-      // Находим необходимые куки
-      const tokenCookie = cookies.find((c) => c.name === "token");
-      const refreshTokenCookie = cookies.find(
-        (c) => c.name === "refresh_token"
+      // Находим нужные куки
+      const tokenCookie = cookies.find(
+        (c) => c.name === "token" && c.domain === "web.remonline.app"
       );
-      const csrfTokenCookie = cookies.find((c) => c.name === "csrftoken");
+      const refreshTokenCookie = cookies.find(
+        (c) => c.name === "refresh_token" && c.domain === "web.remonline.app"
+      );
+      const csrfTokenCookie = cookies.find(
+        (c) => c.name === "csrftoken" && c.domain === "web.remonline.app"
+      );
 
       if (!tokenCookie || !refreshTokenCookie || !csrfTokenCookie) {
         console.error("Missing required cookies");
@@ -102,27 +106,38 @@ app.post("/api/login", async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        domain: ".remonline.app",
+        path: "/",
+        maxAge: 24 * 60 * 60 * 1000,
       });
 
       res.cookie("refresh_token", refreshTokenCookie.value, {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        domain: ".remonline.app",
+        path: "/",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
       res.cookie("csrftoken", csrfTokenCookie.value, {
         httpOnly: false,
         secure: true,
         sameSite: "Lax",
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        domain: ".remonline.app",
+        path: "/",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      // Отправляем успешный ответ
+      // Отправляем токены в теле ответа для сохранения на клиенте
       res.json({
         success: true,
-        csrfToken: csrfTokenCookie.value, // Отправляем csrfToken в теле ответа
+        csrfToken: csrfTokenCookie.value,
+        tokens: {
+          token: tokenCookie.value,
+          refreshToken: refreshTokenCookie.value,
+          csrfToken: csrfTokenCookie.value,
+        },
       });
     } else {
       res.status(401).json({ error: "Неверные учетные данные" });
@@ -322,13 +337,13 @@ const formatCookies = (cookies) => {
     return "";
   }
 
-  // Фильтруем только нужные куки и те, что относятся к домену web.remonline.app
+  // Фильтруем только нужные куки с правильного домена
   const relevantCookies = cookies.filter(
     (cookie) =>
       (cookie.name === "token" ||
         cookie.name === "refresh_token" ||
         cookie.name === "csrftoken") &&
-      cookie.domain.includes("remonline.app")
+      cookie.domain === "web.remonline.app"
   );
 
   if (relevantCookies.length === 0) {
@@ -336,7 +351,12 @@ const formatCookies = (cookies) => {
     return "";
   }
 
-  const cookieString = relevantCookies
+  // Сортируем куки в определенном порядке
+  const orderedCookies = ["token", "refresh_token", "csrftoken"]
+    .map((name) => relevantCookies.find((cookie) => cookie.name === name))
+    .filter(Boolean);
+
+  const cookieString = orderedCookies
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
 

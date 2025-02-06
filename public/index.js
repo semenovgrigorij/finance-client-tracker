@@ -1,100 +1,54 @@
-// Функция для получения CSRF токена из куки
-function getCsrfToken() {
-  const name = "csrftoken=";
-  const decodedCookie = decodeURIComponent(document.cookie);
-  const cookieArray = decodedCookie.split(";");
-  for (let i = 0; i < cookieArray.length; i++) {
-    let cookie = cookieArray[i].trim();
-    if (cookie.indexOf(name) === 0) {
-      return cookie.substring(name.length, cookie.length);
-    }
-  }
-  return "";
-}
+// Утилита для работы с токенами
+const TokenManager = {
+  setTokens(tokens) {
+    localStorage.setItem("auth_tokens", JSON.stringify(tokens));
+  },
 
-// Функция для получения CSRF токена из куки
-function getCsrfToken() {
-  const name = "csrftoken=";
-  const decodedCookie = decodeURIComponent(document.cookie);
-  const cookieArray = decodedCookie.split(";");
-  for (let i = 0; i < cookieArray.length; i++) {
-    let cookie = cookieArray[i].trim();
-    if (cookie.indexOf(name) === 0) {
-      return cookie.substring(name.length, cookie.length);
-    }
-  }
-  return "";
-}
+  getTokens() {
+    const tokens = localStorage.getItem("auth_tokens");
+    return tokens ? JSON.parse(tokens) : null;
+  },
 
-async function handleLogin() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  const loginError = document.getElementById("loginError");
-  const loginForm = document.getElementById("loginForm");
-  const mainContent = document.getElementById("mainContent");
-  const loginButton = document.getElementById("loginButton");
-  const defaultText = loginButton.querySelector(".default-text");
-  const loadingText = loginButton.querySelector(".loading-text");
-  const preloader = document.getElementById("preloader");
+  clearTokens() {
+    localStorage.removeItem("auth_tokens");
+  },
 
-  try {
-    preloader.style.display = "flex";
-    defaultText.style.display = "none";
-    loadingText.style.display = "inline";
-    loginButton.disabled = true;
+  getCsrfToken() {
+    const tokens = this.getTokens();
+    return tokens?.csrfToken || "";
+  },
+};
 
-    const response = await fetch(
-      "https://product-movement.onrender.com/api/login",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      }
-    );
+// Утилита для работы с токенами
+const TokenManager = {
+  setTokens(tokens) {
+    localStorage.setItem("auth_tokens", JSON.stringify(tokens));
+  },
 
-    const data = await response.json();
-    console.log("Login response:", response.status, data);
+  getTokens() {
+    const tokens = localStorage.getItem("auth_tokens");
+    return tokens ? JSON.parse(tokens) : null;
+  },
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        loginError.textContent = "Неправильний логін або пароль";
-      } else {
-        loginError.textContent = data.error || "Помилка входу";
-      }
-      loginError.style.display = "block";
-      return;
-    }
+  clearTokens() {
+    localStorage.removeItem("auth_tokens");
+  },
 
-    if (data.success) {
-      // Сохраняем csrfToken если он пришел в ответе
-      if (data.csrfToken) {
-        localStorage.setItem("csrfToken", data.csrfToken);
-      }
-
-      loginForm.style.display = "none";
-      mainContent.style.display = "block";
-      loginError.style.display = "none";
-      populateLocations();
-    }
-  } catch (error) {
-    console.error("Помилка:", error);
-    loginError.textContent = "Помилка підключення до сервера";
-    loginError.style.display = "block";
-  } finally {
-    preloader.style.display = "none";
-    defaultText.style.display = "inline";
-    loadingText.style.display = "none";
-    loginButton.disabled = false;
-  }
-}
+  getCsrfToken() {
+    const tokens = this.getTokens();
+    return tokens?.csrfToken || "";
+  },
+};
 
 // Модифицируем функцию loadData для использования сохраненного CSRF токена
 async function loadData() {
   const idInput = document.getElementById("idInput").value;
-  const csrfToken = localStorage.getItem("csrfToken") || getCsrfToken();
+  const tokens = TokenManager.getTokens();
+
+  if (!tokens) {
+    showSessionExpiredModal();
+    return;
+  }
 
   try {
     const response = await fetch(
@@ -103,7 +57,7 @@ async function loadData() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
+          "X-CSRF-Token": tokens.csrfToken,
         },
         credentials: "include",
         body: JSON.stringify({
@@ -120,6 +74,19 @@ async function loadData() {
       }
     );
 
+    if (response.status === 401) {
+      const errorData = await response.json();
+      if (errorData.error === "session_expired") {
+        TokenManager.clearTokens();
+        showSessionExpiredModal();
+        return;
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     // Остальной код обработки ответа...
   } catch (error) {
     console.error("Помилка:", error);
@@ -130,6 +97,7 @@ async function loadData() {
 }
 
 function handleLogout() {
+  TokenManager.clearTokens();
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
 
@@ -139,7 +107,7 @@ function handleLogout() {
   document.getElementById("loginError").style.display = "none";
 
   // Сбрасываем форму полностью
-  loginForm.reset();
+  // loginForm.reset();
 
   // Показываем форму логина и скрываем основной контент
   loginForm.style.display = "block";
@@ -149,9 +117,9 @@ function handleLogout() {
   document.getElementById("result").innerHTML = "";
 
   // Очищаем историю формы
-  if (window.history.replaceState) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
+  // if (window.history.replaceState) {
+  //   window.history.replaceState({}, document.title, window.location.pathname);
+  // }
 }
 
 let tableData = [];
