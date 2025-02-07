@@ -3,12 +3,14 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const cron = require("node-cron");
-const path = require("path");
 require("dotenv").config();
 
 const app = express();
 let globalCookies = null;
 
+const path = require("path");
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public", "img")));
 // app.use(express.static("public"));
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/favicon.ico", (req, res) => {
@@ -16,8 +18,12 @@ app.get("/favicon.ico", (req, res) => {
   res.setHeader("Content-Type", "image/x-icon");
   res.sendFile(path.join(__dirname, "public", "favicon.ico"));
 });
-app.use((req, res, next) => {
-  console.log("Request URL:", req.url);
+app.use((err, req, res, next) => {
+  console.log("Запрошенный URL:", req.url);
+  console.log("Метод:", req.method);
+  console.log("Заголовки:", req.headers);
+  console.error("Ошибка:", err);
+  res.status(500).send("Что-то пошло не так!");
   next();
 });
 app.use(express.json());
@@ -52,9 +58,9 @@ app.use((req, res, next) => {
   next();
 });
 ///////////////
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+// app.get("/", (req, res) => {
+//   res.sendFile(path.join(__dirname, "public", "index.html"));
+// });
 
 app.post("/api/login", async (req, res) => {
   try {
