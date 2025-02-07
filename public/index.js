@@ -584,6 +584,9 @@ async function loadData() {
     entityData = await initialEntityResponse.json();
     employeesData = await initialEmployeeResponse.json();
 
+    let totalRecords = 0; // Добавляем счетчик
+    console.log("Начинаем сбор данных...");
+
     // Собираем данные по страницам
     while (hasMoreData) {
       const flowResponse = await fetch(
@@ -606,6 +609,11 @@ async function loadData() {
       );
 
       const flowData = await flowResponse.json();
+      console.log(
+        `Получены данные страницы ${currentPage}:`,
+        flowData.data?.length || 0,
+        "записей"
+      );
 
       if (flowData.data && flowData.data.length > 0) {
         // Фильтруем данные по выбранной локации и складу
@@ -616,13 +624,24 @@ async function loadData() {
           return true;
         });
 
+        console.log(
+          `После фильтрации для страницы ${currentPage}:`,
+          filteredData.length,
+          "записей"
+        );
+
         allData = [...allData, ...filteredData];
+        totalRecords += filteredData.length;
+
         hasMoreData = flowData.data.length === 50;
         currentPage++;
       } else {
         hasMoreData = false;
       }
     }
+
+    console.log("Всего собрано записей:", totalRecords);
+    console.log("Длина массива allData:", allData.length);
 
     // Проверяем, есть ли данные после фильтрации
     if (allData.length === 0) {
@@ -649,6 +668,7 @@ async function loadData() {
             <p>Название: ${entityData.title || "-"}</p>
           </div>
         </div>
+        <p>Всего записей: ${totalRecords}</p>
       </div>
       <table>
         <thead>
@@ -669,6 +689,7 @@ async function loadData() {
 
     let balance = 0;
     allData.reverse().forEach((item) => {
+      console.log(`Обработка записи ${index + 1} из ${allData.length}`);
       const income = item.income !== undefined ? parseFloat(item.income) : 0;
       const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
       const clientInfo = `${item.client_name || "-"} (${
