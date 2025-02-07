@@ -557,8 +557,7 @@ async function loadData() {
 
     let allData = [];
     let currentPage = 1;
-    let totalCount = null;
-    let hasMoreData = true;
+    let totalPages = Math.ceil(241 / 50);
 
     // Получаем данные о товаре и сотрудниках
     const [initialEntityResponse, initialEmployeeResponse] = await Promise.all([
@@ -584,7 +583,7 @@ async function loadData() {
     console.log("Начинаем сбор данных...");
 
     // Собираем данные по страницам
-    while (hasMoreData) {
+    while (currentPage <= totalPages) {
       const flowResponse = await fetch(
         "https://product-movement.onrender.com/api/proxy/goods-flow-items",
         {
@@ -600,6 +599,12 @@ async function loadData() {
             endDate: 253402300799999,
             tz: "Europe/Kiev",
             id: idInput,
+            // Добавляем фильтрацию на уровне запроса
+            ...(selectedLocationId && selectedWarehouseId
+              ? {
+                  warehouse_id: selectedWarehouseId,
+                }
+              : {}),
           }),
         }
       );
@@ -611,18 +616,8 @@ async function loadData() {
       );
       console.log("Всего записей в системе:", flowData.count);
 
-      if (!totalCount) {
-        totalCount = flowData.count;
-      }
-
       if (flowData.data && flowData.data.length > 0) {
-        // Фильтруем данные по выбранной локации и складу
-        const filteredData = flowData.data.filter((item) => {
-          if (selectedLocationId && selectedWarehouseId) {
-            return String(item.warehouse_id) === String(selectedWarehouseId);
-          }
-          return true;
-        });
+        allData = [...allData, ...filteredData];
 
         console.log(
           `Страница ${currentPage}, после фильтрации:`,
@@ -634,24 +629,13 @@ async function loadData() {
             new Date(item.created_at).toLocaleDateString()
           )
         );
-
-        allData = [...allData, ...filteredData];
-        // Проверяем, нужно ли загружать следующую страницу
-        hasMoreData = currentPage * 50 < totalCount;
         currentPage++;
-      } else {
-        hasMoreData = false;
       }
-    }
+      console.log("Всего собрано записей:", allData.length);
 
-    console.log("Всего собрано записей:", allData.length);
-    console.log("Общее количество записей в системе:", totalCount);
-    console.log("Диапазон дат:", {
-      first: new Date(allData[0]?.created_at).toLocaleDateString(),
-      last: new Date(
-        allData[allData.length - 1]?.created_at
-      ).toLocaleDateString(),
-    });
+      // Сортируем данные по дате
+      allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
 
     // Проверяем, есть ли данные после фильтрации
     if (allData.length === 0) {
@@ -660,9 +644,6 @@ async function loadData() {
       ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
       return;
     }
-
-    // Сортируем все данные по дате перед отображением
-    allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     // Создаем таблицу
     let tableHTML = `
