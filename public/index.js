@@ -596,7 +596,7 @@ async function loadData() {
             pageSize: 50,
             skip: (currentPage - 1) * 50,
             startDate: 0,
-            endDate: 1738073893133,
+            endDate: 253402300799999,
             tz: "Europe/Kiev",
             id: idInput,
           }),
