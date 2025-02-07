@@ -338,13 +338,6 @@ async function loadData() {
 
       if (flowData.data && flowData.data.length > 0) {
         allData = [...allData, ...flowData.data];
-
-        console.log(
-          "Даты записей:",
-          filteredData.map((item) =>
-            new Date(item.created_at).toLocaleDateString()
-          )
-        );
         currentPage++;
       }
       console.log("Всего собрано записей:", allData.length);
