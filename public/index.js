@@ -1,6 +1,3 @@
-let currentPage = 1;
-let totalPages = 1;
-
 function handleKeyDown(event) {
   if (event.key === "Enter") {
     loadData();
@@ -554,12 +551,6 @@ async function loadData() {
   const selectedLocationId = locationSelect.value;
   const selectedWarehouseId = warehouseSelect.value;
 
-  let allData = [];
-  let currentPage = 1;
-  let hasMoreData = true;
-  let entityData = null;
-  let employeesData = null;
-
   try {
     const preloader = document.getElementById("preloader");
     preloader.style.display = "flex";
@@ -587,6 +578,10 @@ async function loadData() {
     let totalRecords = 0; // Добавляем счетчик
     console.log("Начинаем сбор данных...");
 
+    let allData = [];
+    let currentPage = 1;
+    let hasMoreData = true;
+
     // Собираем данные по страницам
     while (hasMoreData) {
       const flowResponse = await fetch(
@@ -610,9 +605,8 @@ async function loadData() {
 
       const flowData = await flowResponse.json();
       console.log(
-        `Получены данные страницы ${currentPage}:`,
-        flowData.data?.length || 0,
-        "записей"
+        `Страница ${currentPage}, получено записей:`,
+        flowData.data?.length
       );
 
       if (flowData.data && flowData.data.length > 0) {
@@ -625,14 +619,17 @@ async function loadData() {
         });
 
         console.log(
-          `После фильтрации для страницы ${currentPage}:`,
-          filteredData.length,
-          "записей"
+          `Страница ${currentPage}, после фильтрации:`,
+          filteredData.length
+        );
+        console.log(
+          "Даты записей:",
+          filteredData.map((item) =>
+            new Date(item.created_at).toLocaleDateString()
+          )
         );
 
         allData = [...allData, ...filteredData];
-        totalRecords += filteredData.length;
-
         hasMoreData = flowData.data.length === 50;
         currentPage++;
       } else {
@@ -640,8 +637,13 @@ async function loadData() {
       }
     }
 
-    console.log("Всего собрано записей:", totalRecords);
-    console.log("Длина массива allData:", allData.length);
+    console.log("Всего собрано записей:", allData.length);
+    console.log("Диапазон дат:", {
+      first: new Date(allData[0]?.created_at).toLocaleDateString(),
+      last: new Date(
+        allData[allData.length - 1]?.created_at
+      ).toLocaleDateString(),
+    });
 
     // Проверяем, есть ли данные после фильтрации
     if (allData.length === 0) {
@@ -650,6 +652,9 @@ async function loadData() {
       ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
       return;
     }
+
+    // Сортируем все данные по дате перед отображением
+    allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     // Создаем таблицу
     let tableHTML = `
@@ -714,6 +719,8 @@ async function loadData() {
         : "-";
 
       balance = balance - outcome + income;
+
+      console.log("Обработка записи:", dateStr);
 
       tableHTML += `
         <tr>
