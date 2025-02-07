@@ -339,7 +339,7 @@ async function loadData() {
       console.log("Всего собрано записей:", allData.length);
 
       // Сортируем данные по дате
-      allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     }
 
     if (selectedLocationId && selectedWarehouseId) {
@@ -555,7 +555,7 @@ function createTable(allData, entityData, employeesData) {
 
   // Добавляем строки таблицы
   let balance = 0;
-  allData.forEach((item) => {
+  allData.reverse().forEach((item) => {
     const income = item.income !== undefined ? parseFloat(item.income) : 0;
     const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
     balance = balance - outcome + income;
