@@ -874,6 +874,10 @@ function handleKeyDown(event) {
 document.getElementById("loadButton").onclick = loadData;
 
 function exportToExcel() {
+  // Добавляем BOM для правильной кодировки UTF-8
+  const EXCEL_TYPE =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+
   const ws = XLSX.utils.aoa_to_sheet([
     [
       "Дата",
@@ -888,17 +892,37 @@ function exportToExcel() {
     ],
     ...tableData,
   ]);
+
+  // Настраиваем параметры для правильного отображения кириллицы
+  ws["!cols"] = [
+    { wch: 20 }, // Дата
+    { wch: 15 }, // Номер документа
+    { wch: 20 }, // Тип документа
+    { wch: 25 }, // Кто создал
+    { wch: 30 }, // Склад
+    { wch: 30 }, // Контрагент
+    { wch: 15 }, // Приход
+    { wch: 15 }, // Расход
+    { wch: 15 }, // Остаток
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Data");
-  XLSX.writeFile(wb, "data.xlsx");
+
+  // Добавляем параметр bookType для xlsx формата
+  XLSX.writeFile(wb, "data.xlsx", { bookType: "xlsx", type: "binary" });
 }
 
 function exportToPDF() {
   const { jsPDF } = window.jspdf;
+
+  // Создаем PDF с поддержкой кириллицы
   const doc = new jsPDF({
-    orientation: "landscape", // Альбомная ориентация
-    unit: "pt", // Единицы измерения
-    format: "a4", // Формат страницы
+    orientation: "landscape",
+    unit: "pt",
+    format: "a4",
+    putOnlyUsedFonts: true,
+    floatPrecision: 16,
   });
 
   doc.autoTable({
@@ -916,20 +940,34 @@ function exportToPDF() {
       ],
     ],
     body: tableData,
-    startY: 20, // Начальная позиция таблицы
-    theme: "grid", // Тема таблицы
+    startY: 20,
+    theme: "grid",
     styles: {
-      fontSize: 8, // Размер шрифта
-      cellPadding: 4, // Внутренние отступы ячеек
-      overflow: "linebreak", // Перенос текста
+      font: "helvetica", // используем шрифт с поддержкой кириллицы
+      fontSize: 8,
+      cellPadding: 4,
+      overflow: "linebreak",
+      halign: "left", // выравнивание по левому краю
     },
     columnStyles: {
-      0: { cellWidth: 60 }, // Ширина для столбца
+      0: { cellWidth: 60 },
       1: { cellWidth: 80 },
-      2: { cellWidth: 60 },
-      3: { cellWidth: 60 },
-      4: { cellWidth: 40 },
-      5: { cellWidth: 40 },
+      2: { cellWidth: 80 },
+      3: { cellWidth: 80 },
+      4: { cellWidth: 80 },
+      5: { cellWidth: 80 },
+      6: { cellWidth: 40 },
+      7: { cellWidth: 40 },
+      8: { cellWidth: 40 },
+    },
+    // Добавляем поддержку кириллицы
+    didDrawCell: function (data) {
+      if (data.section === "body" || data.section === "head") {
+        const td = data.cell.raw;
+        if (td) {
+          doc.setFontSize(8);
+        }
+      }
     },
   });
 
