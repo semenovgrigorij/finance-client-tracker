@@ -346,6 +346,30 @@ async function loadData() {
       allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
+    if (selectedLocationId && selectedWarehouseId) {
+      // Фильтруем данные только если выбран конкретный склад
+      allData = allData.filter((item) => {
+        const relationType = parseInt(item.relation_type, 10);
+
+        if (relationType === 5) {
+          // Если это перемещение
+          if (item.outcome) {
+            // Если это расход, сравниваем с warehouse_id
+            return String(item.warehouse_id) === String(selectedWarehouseId);
+          } else if (item.income) {
+            // Если это приход, сравниваем с optional_warehouse_id
+            return (
+              String(item.optional_warehouse_id) === String(selectedWarehouseId)
+            );
+          }
+        } else {
+          // Для всех остальных типов операций сравниваем с warehouse_id
+          return String(item.warehouse_id) === String(selectedWarehouseId);
+        }
+        return false; // Если ни одно условие не подошло
+      });
+    }
+
     // Проверяем, есть ли данные после фильтрации
     if (allData.length === 0) {
       document.getElementById(
