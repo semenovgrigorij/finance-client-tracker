@@ -327,25 +327,7 @@ button:disabled {
 .password-input:hover .eye-icon {
   opacity: 0.8;
 }
-/* Пагинанация */
 
-.pagination-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.pagination-container button {
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-}
-
-.pagination-container button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 /*  С вращающимся кругом */
 /*
 .spinner-circle {

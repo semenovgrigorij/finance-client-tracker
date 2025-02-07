@@ -267,15 +267,17 @@ function enableLoadButton() {
   console.log("Selected Warehouse ID:", selectedWarehouseId);
 }
 
-async function loadData(page = 1) {
-  console.log("Загрузка страницы:", page);
-  currentPage = page;
+async function loadData() {
   const idInput = document.getElementById("idInput").value;
   const locationSelect = document.getElementById("locationSelect");
   const warehouseSelect = document.getElementById("warehouseSelect");
   const selectedLocationId = locationSelect.value;
   const selectedWarehouseId = warehouseSelect.value;
   const errorDiv = document.getElementById("errorMessage");
+
+  let allData = []; // Массив для всех данных
+  let currentPage = 1;
+  let hasMoreData = true;
 
   if (errorDiv) errorDiv.style.display = "none";
 
@@ -288,70 +290,101 @@ async function loadData(page = 1) {
   }
 
   try {
+    // Показываем индикатор загрузки
+    const preloader = document.getElementById("preloader");
+    preloader.style.display = "flex";
     // Выполняем три запроса параллельно
-    const [flowResponse, entityResponse, employeeResponse] = await Promise.all([
-      // Первый запрос - goods-flow-items
-      fetch(
-        "https://product-movement.onrender.com/api/proxy/goods-flow-items",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sort: {},
-            page: page,
-            take: 50,
-            pageSize: 50,
-            skip: 0,
-            startDate: 0,
-            endDate: 1738073893133,
-            tz: "Europe/Kiev",
-            id: idInput,
-          }),
-        }
-      ),
-      // Второй запрос - get-entity
-      fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: idInput,
-        }),
-      }),
-      // Третий запрос - get-employees-and-invites
-      fetch(
-        "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        }
-      ),
-    ]);
+    while (hasMoreData) {
+      const [flowResponse, entityResponse, employeeResponse] =
+        await Promise.all([
+          // Первый запрос - goods-flow-items
+          fetch(
+            "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                sort: {},
+                page: currentPage,
+                take: 50,
+                pageSize: 50,
+                skip: (currentPage - 1) * 50,
+                startDate: 0,
+                endDate: 1738073893133,
+                tz: "Europe/Kiev",
+                id: idInput,
+              }),
+            }
+          ),
+          // Второй запрос - get-entity
+          currentPage === 1
+            ? fetch(
+                "https://product-movement.onrender.com/api/proxy/get-entity",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    id: idInput,
+                  }),
+                }
+              )
+            : Promise.resolve(null),
+          // Третий запрос - get-employees-and-invites
+          currentPage === 1
+            ? fetch(
+                "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({}),
+                }
+              )
+            : Promise.resolve(null),
+        ]);
 
-    if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
-      throw new Error(
-        `https error! status: ${
-          !flowResponse.ok
-            ? flowResponse.status
-            : !entityResponse.ok
-            ? entityResponse.status
-            : employeeResponse.status
-        }`
-      );
+      if (!flowResponse.ok || !entityResponse.ok || !employeeResponse.ok) {
+        throw new Error(
+          `https error! status: ${
+            !flowResponse.ok
+              ? flowResponse.status
+              : !entityResponse.ok
+              ? entityResponse.status
+              : employeeResponse.status
+          }`
+        );
+      }
+
+      const flowData = await flowResponse.json();
+      const entityData = currentPage === 1 ? await entityResponse.json() : null;
+      const employeesData =
+        currentPage === 1 ? await employeeResponse.json() : null;
+
+      if (flowData.data && flowData.data.length > 0) {
+        allData = [...allData, ...flowData.data];
+
+        // Проверяем, есть ли ещё данные
+        hasMoreData = flowData.data.length === 50; // Если получили меньше 50 записей, значит это последняя страница
+        currentPage++;
+      } else {
+        hasMoreData = false;
+      }
     }
 
+    // После сбора всех данных создаём таблицу
+    createTable(allData, entityData, employeesData);
+
     // Получаем данные из трёх ответов
-    const [flowData, entityData, employeesData] = await Promise.all([
-      flowResponse.json(),
-      entityResponse.json(),
-      employeeResponse.json(),
-    ]);
+    /* const [flowData, entityData, employeesData] = await Promise.all([
+       flowResponse.json(),
+       entityResponse.json(),
+       employeeResponse.json(),
+     ]);
 
     console.log("ОТВЕТ flowData:", flowData);
     console.log("ОТВЕТ entityData:", entityData);
@@ -386,11 +419,6 @@ async function loadData(page = 1) {
 
     // Создаем таблицу
     let tableHTML = `
-    <div class="pagination-container">
-        <button id="prevPage" onclick="changePage('prev')">&larr;</button>
-        <span>Страница <span id="currentPage">1</span> из <span id="totalPages">1</span></span>
-        <button id="nextPage" onclick="changePage('next')">&rarr;</button>
-      </div>
     <div class="entity-info">
       <div class="product-header">
         <div class="product-image">
@@ -505,29 +533,87 @@ async function loadData(page = 1) {
       if (totalPagesEl) totalPagesEl.textContent = totalPages;
       if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
       if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
-    }
+    } */
   } catch (error) {
     console.error("Помилка:", error);
     document.getElementById(
       "result"
     ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
+  } finally {
+    // Скрываем индикатор загрузки
+    preloader.style.display = "none";
   }
 }
 
-function changePage(direction) {
-  console.log("Текущая страница до:", currentPage);
-  console.log("Всего страниц:", totalPages);
+// Функция создания таблицы
+function createTable(allData, entityData, employeesData) {
+  // Создаём HTML таблицы с использованием всех собранных данных
+  let tableHTML = `
+    <div class="entity-info">
+      <div class="product-header">
+        <div class="product-image">
+          ${
+            entityData.image
+              ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
+              : `<img src="./img/GCAR_LOGO.png">`
+          }
+        </div>
+        <div class="product-details">
+          <h3>Товар:</h3>
+          <p>ID: ${entityData.id || "-"}</p>
+          <p>Название: ${entityData.title || "-"}</p>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Номер документа</th>
+          <th>Тип документа</th>
+          <th>Кто создал</th>
+          <th>Склад (ID)</th>
+          <th>Контрагент (ID)</th>
+          <th>Приход</th>
+          <th>Расход</th>
+          <th>Остаток</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
-  if (direction === "prev" && currentPage > 1) {
-    currentPage--;
-    loadData(currentPage);
-  } else if (direction === "next" && currentPage < totalPages) {
-    currentPage++;
-    loadData(currentPage);
+  // Создаём мапу сотрудников
+  const employeesMap = {};
+  if (employeesData?.data) {
+    employeesData.data.forEach((employee) => {
+      employeesMap[employee.id] = employee.name || employee.login;
+    });
   }
 
-  console.log("Текущая страница после:", currentPage);
+  // Добавляем строки таблицы
+  let balance = 0;
+  allData.reverse().forEach((item) => {
+    const income = item.income !== undefined ? parseFloat(item.income) : 0;
+    const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
+    balance = balance - outcome + income;
+
+    // Добавляем строку в таблицу
+    tableHTML += `<tr>...</tr>`; // Ваш существующий код формирования строки
+  });
+
+  tableHTML += `</tbody></table>`;
+  document.getElementById("result").innerHTML = tableHTML;
 }
+
+// Обновляем обработчик события для поля ввода
+function handleKeyDown(event) {
+  if (event.key === "Enter") {
+    loadAllData();
+  }
+}
+
+// Обновляем обработчик кнопки загрузки
+document.getElementById("loadButton").onclick = loadAllData;
 
 function exportToExcel() {
   const ws = XLSX.utils.aoa_to_sheet([
