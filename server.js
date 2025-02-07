@@ -12,6 +12,8 @@ let globalCookies = null;
 // app.use(express.static("public"));
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/favicon.ico", (req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.setHeader("Content-Type", "image/x-icon");
   res.sendFile(path.join(__dirname, "public", "favicon.ico"));
 });
 app.use((req, res, next) => {
@@ -25,6 +27,8 @@ app.use(
     origin: "*", // Настройте для вашего домена
     methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
+    credentials: true,
   })
 );
 
@@ -36,6 +40,15 @@ app.use((req, res, next) => {
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   res.setHeader("Surrogate-Control", "no-store");
+
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  console.log("Request URL:", req.url);
+  console.log("Request Headers:", req.headers);
+
   next();
 });
 ///////////////
