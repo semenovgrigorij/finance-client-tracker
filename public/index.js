@@ -549,32 +549,33 @@ async function loadData() {
 
 async function loadData() {
   const idInput = document.getElementById("idInput").value;
-  let allData = []; // Массив для всех данных
+  const locationSelect = document.getElementById("locationSelect");
+  const warehouseSelect = document.getElementById("warehouseSelect");
+  const selectedLocationId = locationSelect.value;
+  const selectedWarehouseId = warehouseSelect.value;
+
+  let allData = [];
   let currentPage = 1;
   let hasMoreData = true;
-  let entityData = null; // Сохраняем здесь данные о товаре
-  let employeesData = null; // Сохраняем здесь данные о сотрудниках
+  let entityData = null;
+  let employeesData = null;
 
   try {
     const preloader = document.getElementById("preloader");
     preloader.style.display = "flex";
 
-    // Сначала получаем данные о товаре и сотрудниках
+    // Получаем данные о товаре и сотрудниках
     const [initialEntityResponse, initialEmployeeResponse] = await Promise.all([
       fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: idInput }),
       }),
       fetch(
         "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
         }
       ),
@@ -583,15 +584,13 @@ async function loadData() {
     entityData = await initialEntityResponse.json();
     employeesData = await initialEmployeeResponse.json();
 
-    // Теперь собираем данные по страницам
+    // Собираем данные по страницам
     while (hasMoreData) {
       const flowResponse = await fetch(
         "https://product-movement.onrender.com/api/proxy/goods-flow-items",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sort: {},
             page: currentPage,
@@ -609,7 +608,15 @@ async function loadData() {
       const flowData = await flowResponse.json();
 
       if (flowData.data && flowData.data.length > 0) {
-        allData = [...allData, ...flowData.data];
+        // Фильтруем данные по выбранной локации и складу
+        const filteredData = flowData.data.filter((item) => {
+          if (selectedLocationId && selectedWarehouseId) {
+            return String(item.warehouse_id) === String(selectedWarehouseId);
+          }
+          return true;
+        });
+
+        allData = [...allData, ...filteredData];
         hasMoreData = flowData.data.length === 50;
         currentPage++;
       } else {
@@ -617,11 +624,15 @@ async function loadData() {
       }
     }
 
-    console.log("ОТВЕТ flowData:", { data: allData });
-    console.log("ОТВЕТ entityData:", entityData);
-    console.log("ОТВЕТ employeesData:", employeesData);
+    // Проверяем, есть ли данные после фильтрации
+    if (allData.length === 0) {
+      document.getElementById(
+        "result"
+      ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
+      return;
+    }
 
-    // Создаем таблицу с собранными данными
+    // Создаем таблицу
     let tableHTML = `
       <div class="entity-info">
         <div class="product-header">
@@ -656,7 +667,6 @@ async function loadData() {
         <tbody>
     `;
 
-    // Добавляем строки в таблицу
     let balance = 0;
     allData.reverse().forEach((item) => {
       const income = item.income !== undefined ? parseFloat(item.income) : 0;
@@ -669,12 +679,10 @@ async function loadData() {
       })`;
       const relationType = parseInt(item.relation_type, 10);
       const documentType = documentTypes[relationType] || "-";
-
       const employeeName =
         employeesData.data.find((emp) => emp.id === item.employee_id)?.name ||
         item.employee_id ||
         "-";
-
       const dateStr = item.created_at
         ? new Date(item.created_at).toLocaleString("ru-RU", {
             year: "numeric",
