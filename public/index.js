@@ -394,12 +394,12 @@ async function loadData() {
     allData.reverse().forEach((item) => {
       const income = item.income !== undefined ? parseFloat(item.income) : 0;
       const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-      const clientInfo = `${item.client_name || "-"} (${
-        item.client_id || "-"
-      })`;
-      const warehouseInfo = `${item.warehouse_title || "-"} (${
-        item.warehouse_id || "-"
-      })`;
+      // const clientInfo = `${item.client_name || "-"} (${
+      //   item.client_id || "-"
+      // })`;
+      // const warehouseInfo = `${item.warehouse_title || "-"} (${
+      //   item.warehouse_id || "-"
+      // })`;
       const relationType = parseInt(item.relation_type, 10);
       const documentType = documentTypes[relationType] || "-";
       const employeeName =
@@ -416,7 +416,45 @@ async function loadData() {
           })
         : "-";
 
-      balance = balance - outcome + income;
+      // Определяем склад и контрагента в зависимости от типа операции
+      let warehouseInfo, clientInfo;
+
+      if (relationType === 5) {
+        // Если это перемещение
+        if (outcome) {
+          // Если это расход (перемещение из склада)
+          warehouseInfo = `${item.warehouse_title || "-"} (${
+            item.warehouse_id || "-"
+          })`;
+          clientInfo = `${item.optional_warehouse_title || "-"} (${
+            item.optional_warehouse_id || "-"
+          })`;
+        } else if (income) {
+          // Если это приход (перемещение на склад)
+          warehouseInfo = `${item.optional_warehouse_title || "-"} (${
+            item.optional_warehouse_id || "-"
+          })`;
+          clientInfo = `${item.warehouse_title || "-"} (${
+            item.warehouse_id || "-"
+          })`;
+        }
+      } else {
+        // Для остальных типов операций оставляем как было
+        warehouseInfo = `${item.warehouse_title || "-"} (${
+          item.warehouse_id || "-"
+        })`;
+        clientInfo = `${item.client_name || "-"} (${item.client_id || "-"})`;
+      }
+
+      // Вычисляем остаток только если операция относится к выбранному складу
+      let currentBalance = 0;
+      const warehouseIdFromInfo = warehouseInfo.match(/\((\d+)\)/)?.[1];
+      if (warehouseIdFromInfo === selectedWarehouseId) {
+        balance = balance - outcome + income;
+        currentBalance = balance;
+      }
+
+      // balance = balance - outcome + income;
 
       console.log("Обработка записи:", dateStr);
 
@@ -430,7 +468,7 @@ async function loadData() {
           <td>${clientInfo}</td>
           <td>${item.income !== undefined ? item.income : "-"}</td>
           <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
-          <td>${balance}</td>
+          <td>${currentBalance || "-"}</td>
         </tr>
       `;
     });
