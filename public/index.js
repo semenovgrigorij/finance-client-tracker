@@ -731,9 +731,9 @@ function createTableHTML(
   sortedData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   // Создаем HTML таблицы
-  let tableHTML = createTableHeader(entityData, sortedData.length);
+  // let tableHTML = createTableHeader(entityData, sortedData.length);
   // Создаем шапку таблицы
-  /*
+
   let tableHTML = `
     <div class="entity-info">
       <div class="product-header">
@@ -767,7 +767,7 @@ function createTableHTML(
         </tr>
       </thead>
       <tbody>
-  `; */
+  `;
   // Добавляем строки таблицы
   sortedData.forEach((item) => {
     tableHTML += createTableRow(item, employeesData, selectedWarehouseId);
