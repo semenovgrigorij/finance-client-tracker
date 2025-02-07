@@ -435,7 +435,7 @@ async function loadData() {
             minute: "2-digit",
           })
         : "-";
-
+      console.log(employeeName);
       // Определяем склад и контрагента в зависимости от типа операции
       let warehouseInfo, clientInfo;
 
