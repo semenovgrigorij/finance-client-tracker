@@ -263,7 +263,7 @@ function enableLoadButton() {
 
   console.log("Selected Warehouse ID:", selectedWarehouseId);
 }
-
+/*
 async function loadData() {
   const idInput = document.getElementById("idInput").value;
   const locationSelect = document.getElementById("locationSelect");
@@ -337,9 +337,6 @@ async function loadData() {
         hasMoreData = false; // Прекращаем цикл если нет данных
       }
       console.log("Всего собрано записей:", allData.length);
-
-      // Сортируем данные по дате
-      allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
     if (selectedLocationId && selectedWarehouseId) {
@@ -414,12 +411,8 @@ async function loadData() {
     allData.forEach((item) => {
       const income = item.income !== undefined ? parseFloat(item.income) : 0;
       const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-      // const clientInfo = `${item.client_name || "-"} (${
-      //   item.client_id || "-"
-      // })`;
-      // const warehouseInfo = `${item.warehouse_title || "-"} (${
-      //   item.warehouse_id || "-"
-      // })`;
+      item.balance = balance - outcome + income; // Сохраняем остаток в объекте
+      balance = item.balance;
       const relationType = parseInt(item.relation_type, 10);
       const documentType = documentTypes[relationType] || "-";
       const employeeName =
@@ -438,7 +431,6 @@ async function loadData() {
             minute: "2-digit",
           })
         : "-";
-      console.log(employeeName);
       // Определяем склад и контрагента в зависимости от типа операции
       let warehouseInfo, clientInfo;
 
@@ -506,10 +498,153 @@ async function loadData() {
   } finally {
     preloader.style.display = "none";
   }
+}  */
+async function loadData() {
+  const idInput = document.getElementById("idInput").value;
+  const locationSelect = document.getElementById("locationSelect");
+  const warehouseSelect = document.getElementById("warehouseSelect");
+  const selectedLocationId = locationSelect.value;
+  const selectedWarehouseId = warehouseSelect.value;
+
+  try {
+    const preloader = document.getElementById("preloader");
+    preloader.style.display = "flex";
+
+    // Получаем данные о товаре и сотрудниках
+    const [entityData, employeesData] = await getInitialData(idInput);
+
+    // Собираем все данные о движении товара
+    const allData = await collectAllData(idInput);
+
+    // Фильтруем данные по выбранному складу если нужно
+    const filteredData = filterDataByWarehouse(
+      allData,
+      selectedLocationId,
+      selectedWarehouseId
+    );
+
+    if (filteredData.length === 0) {
+      showNoDataMessage();
+      return;
+    }
+
+    // Создаем и отображаем таблицу
+    document.getElementById("result").innerHTML = createTableHTML(
+      filteredData,
+      entityData,
+      employeesData,
+      selectedWarehouseId
+    );
+  } catch (error) {
+    console.error("Ошибка:", error);
+    showErrorMessage(error);
+  } finally {
+    preloader.style.display = "none";
+  }
 }
 
+async function getInitialData(idInput) {
+  const [entityResponse, employeesResponse] = await Promise.all([
+    fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: idInput }),
+    }),
+    fetch(
+      "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    ),
+  ]);
+
+  const entityData = await entityResponse.json();
+  const employeesData = await employeesResponse.json();
+  return [entityData, employeesData];
+}
+
+async function collectAllData(idInput) {
+  let allData = [];
+  let currentPage = 1;
+  let hasMoreData = true;
+
+  console.log("Начинаем сбор данных...");
+
+  while (hasMoreData) {
+    const flowData = await fetchPageData(currentPage, idInput);
+
+    if (flowData.data?.length > 0) {
+      allData = [...allData, ...flowData.data];
+      currentPage++;
+    } else {
+      hasMoreData = false;
+    }
+
+    console.log("Всего собрано записей:", allData.length);
+  }
+
+  return allData;
+}
+
+async function fetchPageData(page, idInput) {
+  const response = await fetch(
+    "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sort: {},
+        page,
+        take: 50,
+        pageSize: 50,
+        skip: (page - 1) * 50,
+        startDate: 0,
+        endDate: 253402300799999,
+        tz: "Europe/Kiev",
+        id: idInput,
+      }),
+    }
+  );
+
+  const data = await response.json();
+  console.log(`Страница ${page}, получено записей:`, data.data?.length);
+  return data;
+}
+
+function filterDataByWarehouse(data, locationId, warehouseId) {
+  if (!locationId || !warehouseId) return data;
+
+  return data.filter((item) => {
+    const relationType = parseInt(item.relation_type, 10);
+
+    if (relationType === 5) {
+      if (item.outcome) {
+        return String(item.warehouse_id) === String(warehouseId);
+      } else if (item.income) {
+        return String(item.optional_warehouse_id) === String(warehouseId);
+      }
+    } else {
+      return String(item.warehouse_id) === String(warehouseId);
+    }
+    return false;
+  });
+}
+
+function showNoDataMessage() {
+  document.getElementById(
+    "result"
+  ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
+}
+
+function showErrorMessage(error) {
+  document.getElementById(
+    "result"
+  ).innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+}
 // Функция создания таблицы
-function createTable(allData, entityData, employeesData) {
+/*function createTable(allData, entityData, employeesData) {
   // Создаём HTML таблицы с использованием всех собранных данных
   let tableHTML = `
     <div class="entity-info">
@@ -552,9 +687,13 @@ function createTable(allData, entityData, employeesData) {
       employeesMap[employee.id] = employee.name || employee.login;
     });
   }
-
+  // Сначала сортируем от старых к новым для расчета остатков
+  allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Теперь сортируем от новых к старым для отображения
+  allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   // Добавляем строки таблицы
   let balance = 0;
+  // Считаем остатки
   allData.reverse().forEach((item) => {
     const income = item.income !== undefined ? parseFloat(item.income) : 0;
     const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
@@ -566,8 +705,161 @@ function createTable(allData, entityData, employeesData) {
 
   tableHTML += `</tbody></table>`;
   document.getElementById("result").innerHTML = tableHTML;
+} */
+function createTableHTML(
+  allData,
+  entityData,
+  employeesData,
+  selectedWarehouseId
+) {
+  // Сначала сортируем от старых к новым для расчета остатков
+  allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  // Создаем шапку таблицы
+  let tableHTML = `
+    <div class="entity-info">
+      <div class="product-header">
+        <div class="product-image">
+          ${
+            entityData.image
+              ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
+              : `<img src="./img/GCAR_LOGO.png">`
+          }
+        </div>
+        <div class="product-details">
+          <h3>Товар:</h3>
+          <p>ID: ${entityData.id || "-"}</p>
+          <p>Название: ${entityData.title || "-"}</p>
+          <p>Количество записей: ${allData.length}</p>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Номер документа</th>
+          <th>Тип документа</th>
+          <th>Кто создал</th>
+          <th>Склад (ID)</th>
+          <th>Контрагент (ID)</th>
+          <th>Приход</th>
+          <th>Расход</th>
+          <th>Остаток</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  let balance = 0;
+  // Сортируем от новых к старым для отображения
+  allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  allData.forEach((item) => {
+    const tableRow = createTableRow(
+      item,
+      employeesData,
+      balance,
+      selectedWarehouseId
+    );
+    tableHTML += tableRow.html;
+    balance = tableRow.balance;
+  });
+
+  tableHTML += `</tbody></table>`;
+  return tableHTML;
 }
 
+function createTableRow(item, employeesData, balance, selectedWarehouseId) {
+  const income = item.income !== undefined ? parseFloat(item.income) : 0;
+  const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
+  const relationType = parseInt(item.relation_type, 10);
+  const { warehouseInfo, clientInfo } = getWarehouseAndClientInfo(
+    item,
+    relationType,
+    income,
+    outcome
+  );
+
+  const dateStr = formatDate(item.created_at);
+  const employeeName = getEmployeeName(item.employee_id, employeesData);
+  const documentType = documentTypes[relationType] || "-";
+
+  let currentBalance = 0;
+  const warehouseIdFromInfo = warehouseInfo.match(/\((\d+)\)/)?.[1];
+  if (warehouseIdFromInfo === selectedWarehouseId) {
+    balance = balance - outcome + income;
+    currentBalance = balance;
+  }
+
+  const html = `
+    <tr>
+      <td>${dateStr}</td>
+      <td>${item.relation_id_label || "-"}</td>
+      <td>${documentType}</td>
+      <td>${employeeName}</td>
+      <td>${warehouseInfo}</td>
+      <td>${clientInfo}</td>
+      <td>${item.income !== undefined ? item.income : "-"}</td>
+      <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
+      <td>${currentBalance || "-"}</td>
+    </tr>
+  `;
+
+  return { html, balance };
+}
+
+function getWarehouseAndClientInfo(item, relationType, income, outcome) {
+  let warehouseInfo, clientInfo;
+
+  if (relationType === 5) {
+    if (outcome) {
+      warehouseInfo = `${item.warehouse_title || "-"} (${
+        item.warehouse_id || "-"
+      })`;
+      clientInfo = `${item.optional_warehouse_title || "-"} (${
+        item.optional_warehouse_id || "-"
+      })`;
+    } else if (income) {
+      warehouseInfo = `${item.optional_warehouse_title || "-"} (${
+        item.optional_warehouse_id || "-"
+      })`;
+      clientInfo = `${item.warehouse_title || "-"} (${
+        item.warehouse_id || "-"
+      })`;
+    }
+  } else {
+    warehouseInfo = `${item.warehouse_title || "-"} (${
+      item.warehouse_id || "-"
+    })`;
+    clientInfo = `${item.client_name || "-"} (${item.client_id || "-"})`;
+  }
+
+  return { warehouseInfo, clientInfo };
+}
+
+function getEmployeeName(employeeId, employeesData) {
+  return (
+    employeesData.data.find((emp) => emp.id === employeeId)?.counterparty
+      ?.fullname ||
+    employeesData.data.find((emp) => emp.id === employeeId)?.name ||
+    employeesData.data.find((emp) => emp.id === employeeId)?.login ||
+    employeeId ||
+    "-"
+  );
+}
+
+function formatDate(date) {
+  return date
+    ? new Date(date).toLocaleString("ru-RU", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "-";
+}
 // Обновляем обработчик события для поля ввода
 function handleKeyDown(event) {
   if (event.key === "Enter") {
