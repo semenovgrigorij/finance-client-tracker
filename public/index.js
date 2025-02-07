@@ -713,9 +713,27 @@ function createTableHTML(
   selectedWarehouseId
 ) {
   // Сначала сортируем от старых к новым для расчета остатков
-  allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  let sortedData = [...allData].sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at)
+  );
+  // Рассчитываем остатки
+  let balance = 0;
+  sortedData.forEach((item) => {
+    const income = item.income !== undefined ? parseFloat(item.income) : 0;
+    const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
 
+    if (shouldCountBalance(item, selectedWarehouseId)) {
+      balance += income - outcome;
+      item.calculatedBalance = balance;
+    }
+  });
+  // Теперь сортируем от новых к старым для отображения
+  sortedData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  // Создаем HTML таблицы
+  let tableHTML = createTableHeader(entityData, sortedData.length);
   // Создаем шапку таблицы
+  /*
   let tableHTML = `
     <div class="entity-info">
       <div class="product-header">
@@ -749,25 +767,26 @@ function createTableHTML(
         </tr>
       </thead>
       <tbody>
-  `;
-
-  let balance = 0;
-  // Сортируем от новых к старым для отображения
-  allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  allData.forEach((item) => {
-    const tableRow = createTableRow(
-      item,
-      employeesData,
-      balance,
-      selectedWarehouseId
-    );
-    tableHTML += tableRow.html;
-    balance = tableRow.balance;
+  `; */
+  // Добавляем строки таблицы
+  sortedData.forEach((item) => {
+    tableHTML += createTableRow(item, employeesData, selectedWarehouseId);
   });
-
   tableHTML += `</tbody></table>`;
-  return tableHTML;
+  // return tableHTML;
+}
+
+function shouldCountBalance(item, selectedWarehouseId) {
+  const relationType = parseInt(item.relation_type, 10);
+
+  if (relationType === 5) {
+    if (item.outcome) {
+      return String(item.warehouse_id) === String(selectedWarehouseId);
+    } else if (item.income) {
+      return String(item.optional_warehouse_id) === String(selectedWarehouseId);
+    }
+  }
+  return String(item.warehouse_id) === String(selectedWarehouseId);
 }
 
 function createTableRow(item, employeesData, balance, selectedWarehouseId) {
