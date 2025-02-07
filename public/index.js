@@ -710,11 +710,45 @@ function createTableHTML(
   `;
   // Создаем строки и собираем данные для экспорта
   sortedData.forEach((item) => {
-    const rowHtml = createTableRow(item, employeesData, selectedWarehouseId);
-    tableHTML += rowHtml;
-    if (exportData) {
-      tableData.push(exportData);
-    }
+    const dateStr = formatDate(item.created_at);
+    const employeeName = getEmployeeName(item.employee_id, employeesData);
+    const documentType = documentTypes[parseInt(item.relation_type, 10)] || "-";
+    const income = item.income !== undefined ? parseFloat(item.income) : 0;
+    const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
+    const { warehouseInfo, clientInfo } = getWarehouseAndClientInfo(
+      item,
+      parseInt(item.relation_type, 10),
+      income,
+      outcome
+    );
+
+    // Данные для экспорта
+    tableData.push([
+      dateStr,
+      item.relation_id_label || "-",
+      documentType,
+      employeeName,
+      warehouseInfo,
+      clientInfo,
+      item.income !== undefined ? item.income : "-",
+      item.outcome !== undefined ? item.outcome : "-",
+      item.calculatedBalance || "-",
+    ]);
+
+    // HTML строки
+    tableHTML += `
+      <tr>
+        <td>${dateStr}</td>
+        <td>${item.relation_id_label || "-"}</td>
+        <td>${documentType}</td>
+        <td>${employeeName}</td>
+        <td>${warehouseInfo}</td>
+        <td>${clientInfo}</td>
+        <td>${item.income !== undefined ? item.income : "-"}</td>
+        <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
+        <td>${item.calculatedBalance || "-"}</td>
+      </tr>
+    `;
   });
 
   tableHTML += `</tbody></table>`;
