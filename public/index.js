@@ -555,6 +555,11 @@ async function loadData() {
     const preloader = document.getElementById("preloader");
     preloader.style.display = "flex";
 
+    let allData = [];
+    let currentPage = 1;
+    let totalCount = null;
+    let hasMoreData = true;
+
     // Получаем данные о товаре и сотрудниках
     const [initialEntityResponse, initialEmployeeResponse] = await Promise.all([
       fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
@@ -577,10 +582,6 @@ async function loadData() {
 
     let totalRecords = 0; // Добавляем счетчик
     console.log("Начинаем сбор данных...");
-
-    let allData = [];
-    let currentPage = 1;
-    let hasMoreData = true;
 
     // Собираем данные по страницам
     while (hasMoreData) {
@@ -608,6 +609,11 @@ async function loadData() {
         `Страница ${currentPage}, получено записей:`,
         flowData.data?.length
       );
+      console.log("Всего записей в системе:", flowData.count);
+
+      if (!totalCount) {
+        totalCount = flowData.count;
+      }
 
       if (flowData.data && flowData.data.length > 0) {
         // Фильтруем данные по выбранной локации и складу
@@ -630,7 +636,8 @@ async function loadData() {
         );
 
         allData = [...allData, ...filteredData];
-        hasMoreData = flowData.data.length === 50;
+        // Проверяем, нужно ли загружать следующую страницу
+        hasMoreData = currentPage * 50 < totalCount;
         currentPage++;
       } else {
         hasMoreData = false;
@@ -638,6 +645,7 @@ async function loadData() {
     }
 
     console.log("Всего собрано записей:", allData.length);
+    console.log("Общее количество записей в системе:", totalCount);
     console.log("Диапазон дат:", {
       first: new Date(allData[0]?.created_at).toLocaleDateString(),
       last: new Date(
