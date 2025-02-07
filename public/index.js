@@ -423,7 +423,10 @@ async function loadData() {
       const relationType = parseInt(item.relation_type, 10);
       const documentType = documentTypes[relationType] || "-";
       const employeeName =
+        employeesData.data.find((emp) => emp.id === item.employee_id)
+          ?.counterparty?.fullname ||
         employeesData.data.find((emp) => emp.id === item.employee_id)?.name ||
+        employeesData.data.find((emp) => emp.id === item.employee_id)?.login ||
         item.employee_id ||
         "-";
       const dateStr = item.created_at
