@@ -23,7 +23,48 @@ h1 {
   color: #333;
   text-align: center;
 }
-
+#mainContent {
+  display: flex;
+  flex-direction: column;
+}
+.content-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.content-header-left {
+  display: flex;
+  flex-direction: column;
+}
+.form-group-id {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.form-group-location {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.form-group-warehouseSelect {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 50px;
+}
+.content-header-right {
+  display: flex;
+}
+#loadButton {
+  padding: 20px 30px;
+}
 button {
   padding: 10px 20px;
   background-color: #4caf50;
