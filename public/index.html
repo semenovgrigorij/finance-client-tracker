@@ -14,82 +14,114 @@
     <link rel="shortcut icon" type="image/x-icon" href="./img/favicon.ico" />
   </head>
   <body>
-    <!-- Три точки -->
-    <div id="preloader" class="preloader" style="display: none">
-      <div class="spinner">
-        <div class="dot1"></div>
-        <div class="dot2"></div>
-        <div class="dot3"></div>
-      </div>
-    </div>
-    <!-- С вращающимся кругом -->
-    <!-- <div id="preloader" class="preloader" style="display: none">       <div class="spinner-circle"></div>     </div> -->
-    <!-- С пульсирующим кругом -->
-    <!-- <div id="preloader" class="preloader" style="display: none">       <div class="pulse"></div>     </div> -->
-    <form
-      id="loginForm"
-      onsubmit="handleLoginSubmit(event)"
-      autocomplete="off"
-      class="login-container"
-      novalidate
-    >
-      <h2>Вхід у систему</h2>
-      <div class="form-group">
-        <label for="email">Логін або Email:</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-          readonly
-          onfocus="this.removeAttribute('readonly');"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="password">Пароль:</label>
-        <div class="password-input">
-          <input
-            type="password"
-            id="password"
-            name="password"
-            autocomplete="new-password"
-            readonly
-            onfocus="this.removeAttribute('readonly');"
-            required
-          />
-          <i class="eye-icon" onclick="togglePassword()"></i>
+    <div class="wrapper">
+      <section id="preloader-section">
+        <!-- Три точки -->
+        <div id="preloader" class="preloader" style="display: none">
+          <div class="spinner">
+            <div class="dot1"></div>
+            <div class="dot2"></div>
+            <div class="dot3"></div>
+          </div>
         </div>
-      </div>
-      <button type="submit" id="loginButton">Увійти</button>
-      <div
-        id="loginError"
-        style="color: red; margin-top: 10px; display: none"
-      ></div>
-    </form>
-    <div id="mainContent" style="display: none">
-      <h1>Історія руху товару</h1>
-      <label for="idInput">Введіть ID товару:</label>
-      <input type="text" id="idInput" onkeydown="handleKeyDown(event)" />
-      <label for="locationSelect">Виберіть локацію:</label>
-      <select id="locationSelect" onchange="handleLocationChange()">
-        <option value="">Пошук по всіх локаціях</option>
-      </select>
-      <label for="warehouseSelect">Виберіть склад:</label>
-      <select id="warehouseSelect" onchange="enableLoadButton()" disabled>
-        <option value="">Виберіть склад</option>
-      </select>
-      <div
-        id="errorMessage"
-        style="display: none; color: red; margin: 10px 0"
-      ></div>
-      <button id="loadButton" onclick="loadData(1)">Завантажити дані</button>
-      <button onclick="exportToExcel()">Експортувати в Excel</button>
-      <button onclick="exportToPDF()">Експортувати до PDF</button>
-      <button onclick="handleLogout()" class="logout-btn">Вийти</button>
-      <div id="result" class="table-container"></div>
+        <!-- С вращающимся кругом -->
+        <!-- <div id="preloader" class="preloader" style="display: none">       <div class="spinner-circle"></div>     </div> -->
+        <!-- С пульсирующим кругом -->
+        <!-- <div id="preloader" class="preloader" style="display: none">       <div class="pulse"></div>     </div> -->
+      </section>
+      <section id="entrance-section">
+        <form
+          id="loginForm"
+          onsubmit="handleLoginSubmit(event)"
+          autocomplete="off"
+          class="login-container"
+          novalidate
+        >
+          <h2>Вхід у систему</h2>
+          <div class="form-group">
+            <label for="email">Логін або Email:</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              readonly
+              onfocus="this.removeAttribute('readonly');"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Пароль:</label>
+            <div class="password-input">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                autocomplete="new-password"
+                readonly
+                onfocus="this.removeAttribute('readonly');"
+                required
+              />
+              <i class="eye-icon" onclick="togglePassword()"></i>
+            </div>
+          </div>
+          <button type="submit" id="loginButton">Увійти</button>
+          <div
+            id="loginError"
+            style="color: red; margin-top: 10px; display: none"
+          ></div>
+        </form>
+      </section>
+      <section id="content-section">
+        <div id="mainContent" style="display: none">
+          <div class="content-title">
+            <h1>Історія руху товару</h1>
+          </div>
+          <div class="content-header">
+            <div class="content-header-left">
+              <div class="form-group-id">
+                <label for="idInput">Введіть ID товару:</label>
+                <input
+                  type="text"
+                  id="idInput"
+                  onkeydown="handleKeyDown(event)"
+                />
+              </div>
+              <div class="form-group-location">
+                <label for="locationSelect">Виберіть локацію:</label>
+                <select id="locationSelect" onchange="handleLocationChange()">
+                  <option value="">Пошук по всіх локаціях</option>
+                </select>
+              </div>
+              <div class="form-group-warehouseSelect">
+                <label for="warehouseSelect">Виберіть склад:</label>
+                <select
+                  id="warehouseSelect"
+                  onchange="enableLoadButton()"
+                  disabled
+                >
+                  <option value="">Виберіть склад</option>
+                </select>
+              </div>
+              <div
+                id="errorMessage"
+                style="display: none; color: red; margin: 10px 0"
+              ></div>
+              <button id="loadButton" onclick="loadData(1)">
+                Завантажити дані
+              </button>
+            </div>
+            <div class="content-header-right">
+              <button onclick="exportToExcel()">Експортувати в Excel</button>
+              <button onclick="exportToPDF()">Експортувати до PDF</button>
+              <button onclick="handleLogout()" class="logout-btn">Вийти</button>
+            </div>
+          </div>
+          <div id="result" class="table-container"></div>
+        </div>
+      </section>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>

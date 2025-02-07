@@ -1,3 +1,4 @@
+let tableData = [];
 function handleKeyDown(event) {
   if (event.key === "Enter") {
     loadData();
@@ -90,7 +91,6 @@ function handleLogout() {
   }
 }
 
-let tableData = [];
 // Массив локаций
 const branchIds = [
   { name: "001_G_CAR_UA", id: 112954 },
@@ -644,79 +644,21 @@ function showErrorMessage(error) {
   ).innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
 }
 // Функция создания таблицы
-/*function createTable(allData, entityData, employeesData) {
-  // Создаём HTML таблицы с использованием всех собранных данных
-  let tableHTML = `
-    <div class="entity-info">
-      <div class="product-header">
-        <div class="product-image">
-          ${
-            entityData.image
-              ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
-              : `<img src="./img/GCAR_LOGO.png">`
-          }
-        </div>
-        <div class="product-details">
-          <h3>Товар:</h3>
-          <p>ID: ${entityData.id || "-"}</p>
-          <p>Название: ${entityData.title || "-"}</p>
-        </div>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Дата</th>
-          <th>Номер документа</th>
-          <th>Тип документа</th>
-          <th>Кто создал</th>
-          <th>Склад (ID)</th>
-          <th>Контрагент (ID)</th>
-          <th>Приход</th>
-          <th>Расход</th>
-          <th>Остаток</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
 
-  // Создаём мапу сотрудников
-  const employeesMap = {};
-  if (employeesData?.data) {
-    employeesData.data.forEach((employee) => {
-      employeesMap[employee.id] = employee.name || employee.login;
-    });
-  }
-  // Сначала сортируем от старых к новым для расчета остатков
-  allData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  // Теперь сортируем от новых к старым для отображения
-  allData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  // Добавляем строки таблицы
-  let balance = 0;
-  // Считаем остатки
-  allData.reverse().forEach((item) => {
-    const income = item.income !== undefined ? parseFloat(item.income) : 0;
-    const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-    balance = balance - outcome + income;
-
-    // Добавляем строку в таблицу
-    tableHTML += `<tr>...</tr>`; // Ваш существующий код формирования строки
-  });
-
-  tableHTML += `</tbody></table>`;
-  document.getElementById("result").innerHTML = tableHTML;
-} */
 function createTableHTML(
   allData,
   entityData,
   employeesData,
   selectedWarehouseId
 ) {
+  tableData = [];
   // Сортируем и считаем остатки
   let sortedData = [...allData].sort(
     (a, b) => new Date(a.created_at) - new Date(b.created_at)
   );
   let balance = 0;
+
+  // Считаем остатки
 
   sortedData.forEach((item) => {
     const income = item.income !== undefined ? parseFloat(item.income) : 0;
@@ -766,10 +708,13 @@ function createTableHTML(
       </thead>
       <tbody>
   `;
-  // Создаем строки
+  // Создаем строки и собираем данные для экспорта
   sortedData.forEach((item) => {
     const rowHtml = createTableRow(item, employeesData, selectedWarehouseId);
     tableHTML += rowHtml;
+    if (exportData) {
+      tableData.push(exportData);
+    }
   });
 
   tableHTML += `</tbody></table>`;
@@ -804,7 +749,20 @@ function createTableRow(item, employeesData, selectedWarehouseId) {
   const employeeName = getEmployeeName(item.employee_id, employeesData);
   const documentType = documentTypes[relationType] || "-";
 
-  return `
+  // Формируем данные для экспорта
+  const exportData = [
+    dateStr,
+    item.relation_id_label || "-",
+    documentType,
+    employeeName,
+    warehouseInfo,
+    clientInfo,
+    item.income !== undefined ? item.income : "-",
+    item.outcome !== undefined ? item.outcome : "-",
+    item.calculatedBalance || "-",
+  ];
+
+  const rowHtml = `
     <tr>
       <td>${dateStr}</td>
       <td>${item.relation_id_label || "-"}</td>
@@ -817,6 +775,7 @@ function createTableRow(item, employeesData, selectedWarehouseId) {
       <td>${item.calculatedBalance || "-"}</td>
     </tr>
   `;
+  return { rowHtml, exportData };
 }
 
 function getWarehouseAndClientInfo(item, relationType, income, outcome) {
