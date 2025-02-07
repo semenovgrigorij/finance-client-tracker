@@ -555,13 +555,12 @@ function createTable(allData, entityData, employeesData) {
 
   // Добавляем строки таблицы
   let balance = 0;
-  allData.reverse().forEach((item) => {
+  allData.forEach((item) => {
     const income = item.income !== undefined ? parseFloat(item.income) : 0;
     const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
     balance = balance - outcome + income;
 
-    // Добавляем строку в таблицу
-    tableHTML += `<tr>...</tr>`; // Ваш существующий код формирования строки
+    tableHTML += `<tr>...</tr>`;
   });
 
   tableHTML += `</tbody></table>`;
