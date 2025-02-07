@@ -340,10 +340,6 @@ async function loadData() {
         allData = [...allData, ...flowData.data];
 
         console.log(
-          `Страница ${currentPage}, после фильтрации:`,
-          filteredData.length
-        );
-        console.log(
           "Даты записей:",
           filteredData.map((item) =>
             new Date(item.created_at).toLocaleDateString()
