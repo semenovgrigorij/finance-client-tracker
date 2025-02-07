@@ -666,9 +666,9 @@ async function loadData() {
             <h3>Товар:</h3>
             <p>ID: ${entityData.id || "-"}</p>
             <p>Название: ${entityData.title || "-"}</p>
+            <p>Количество записей: ${allData.length}</p>
           </div>
         </div>
-        <p>Всего записей: ${totalRecords}</p>
       </div>
       <table>
         <thead>
@@ -689,7 +689,6 @@ async function loadData() {
 
     let balance = 0;
     allData.reverse().forEach((item) => {
-      console.log(`Обработка записи ${index + 1} из ${allData.length}`);
       const income = item.income !== undefined ? parseFloat(item.income) : 0;
       const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
       const clientInfo = `${item.client_name || "-"} (${
