@@ -266,7 +266,7 @@ function enableLoadButton() {
 
   console.log("Selected Warehouse ID:", selectedWarehouseId);
 }
-
+/*
 async function loadData() {
   const idInput = document.getElementById("idInput").value;
   const locationSelect = document.getElementById("locationSelect");
@@ -278,6 +278,8 @@ async function loadData() {
   let allData = []; // Массив для всех данных
   let currentPage = 1;
   let hasMoreData = true;
+  let entityData = null;
+  let employeesData = null;
 
   if (errorDiv) errorDiv.style.display = "none";
 
@@ -534,13 +536,180 @@ async function loadData() {
       if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
       if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
     } */
-  } catch (error) {
+/* } catch (error) {
     console.error("Помилка:", error);
     document.getElementById(
       "result"
     ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
   } finally {
     // Скрываем индикатор загрузки
+    preloader.style.display = "none";
+  }
+}  */
+
+async function loadData() {
+  const idInput = document.getElementById("idInput").value;
+  let allData = []; // Массив для всех данных
+  let currentPage = 1;
+  let hasMoreData = true;
+  let entityData = null; // Сохраняем здесь данные о товаре
+  let employeesData = null; // Сохраняем здесь данные о сотрудниках
+
+  try {
+    const preloader = document.getElementById("preloader");
+    preloader.style.display = "flex";
+
+    // Сначала получаем данные о товаре и сотрудниках
+    const [initialEntityResponse, initialEmployeeResponse] = await Promise.all([
+      fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: idInput }),
+      }),
+      fetch(
+        "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        }
+      ),
+    ]);
+
+    entityData = await initialEntityResponse.json();
+    employeesData = await initialEmployeeResponse.json();
+
+    // Теперь собираем данные по страницам
+    while (hasMoreData) {
+      const flowResponse = await fetch(
+        "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sort: {},
+            page: currentPage,
+            take: 50,
+            pageSize: 50,
+            skip: (currentPage - 1) * 50,
+            startDate: 0,
+            endDate: 1738073893133,
+            tz: "Europe/Kiev",
+            id: idInput,
+          }),
+        }
+      );
+
+      const flowData = await flowResponse.json();
+
+      if (flowData.data && flowData.data.length > 0) {
+        allData = [...allData, ...flowData.data];
+        hasMoreData = flowData.data.length === 50;
+        currentPage++;
+      } else {
+        hasMoreData = false;
+      }
+    }
+
+    console.log("ОТВЕТ flowData:", { data: allData });
+    console.log("ОТВЕТ entityData:", entityData);
+    console.log("ОТВЕТ employeesData:", employeesData);
+
+    // Создаем таблицу с собранными данными
+    let tableHTML = `
+      <div class="entity-info">
+        <div class="product-header">
+          <div class="product-image">
+            ${
+              entityData.image
+                ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
+                : `<img src="./img/GCAR_LOGO.png">`
+            }
+          </div>
+          <div class="product-details">
+            <h3>Товар:</h3>
+            <p>ID: ${entityData.id || "-"}</p>
+            <p>Название: ${entityData.title || "-"}</p>
+          </div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Номер документа</th>
+            <th>Тип документа</th>
+            <th>Кто создал</th>
+            <th>Склад (ID)</th>
+            <th>Контрагент (ID)</th>
+            <th>Приход</th>
+            <th>Расход</th>
+            <th>Остаток</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    // Добавляем строки в таблицу
+    let balance = 0;
+    allData.reverse().forEach((item) => {
+      const income = item.income !== undefined ? parseFloat(item.income) : 0;
+      const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
+      const clientInfo = `${item.client_name || "-"} (${
+        item.client_id || "-"
+      })`;
+      const warehouseInfo = `${item.warehouse_title || "-"} (${
+        item.warehouse_id || "-"
+      })`;
+      const relationType = parseInt(item.relation_type, 10);
+      const documentType = documentTypes[relationType] || "-";
+
+      const employeeName =
+        employeesData.data.find((emp) => emp.id === item.employee_id)?.name ||
+        item.employee_id ||
+        "-";
+
+      const dateStr = item.created_at
+        ? new Date(item.created_at).toLocaleString("ru-RU", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "-";
+
+      balance = balance - outcome + income;
+
+      tableHTML += `
+        <tr>
+          <td>${dateStr}</td>
+          <td>${item.relation_id_label || "-"}</td>
+          <td>${documentType}</td>
+          <td>${employeeName}</td>
+          <td>${warehouseInfo}</td>
+          <td>${clientInfo}</td>
+          <td>${item.income !== undefined ? item.income : "-"}</td>
+          <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
+          <td>${balance}</td>
+        </tr>
+      `;
+    });
+
+    tableHTML += `</tbody></table>`;
+    document.getElementById("result").innerHTML = tableHTML;
+  } catch (error) {
+    console.error("Ошибка:", error);
+    document.getElementById(
+      "result"
+    ).innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+  } finally {
     preloader.style.display = "none";
   }
 }
