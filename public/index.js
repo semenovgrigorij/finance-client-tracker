@@ -712,26 +712,24 @@ function createTableHTML(
   employeesData,
   selectedWarehouseId
 ) {
-  // Сначала сортируем от старых к новым для расчета остатков
+  // Сортируем и считаем остатки
   let sortedData = [...allData].sort(
     (a, b) => new Date(a.created_at) - new Date(b.created_at)
   );
-  // Рассчитываем остатки
   let balance = 0;
+
   sortedData.forEach((item) => {
     const income = item.income !== undefined ? parseFloat(item.income) : 0;
     const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-
     if (shouldCountBalance(item, selectedWarehouseId)) {
       balance += income - outcome;
       item.calculatedBalance = balance;
     }
   });
-  // Теперь сортируем от новых к старым для отображения
+
+  // Сортируем для отображения
   sortedData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  // Создаем HTML таблицы
-  // let tableHTML = createTableHeader(entityData, sortedData.length);
   // Создаем шапку таблицы
 
   let tableHTML = `
@@ -768,12 +766,14 @@ function createTableHTML(
       </thead>
       <tbody>
   `;
-  // Добавляем строки таблицы
+  // Создаем строки
   sortedData.forEach((item) => {
-    tableHTML += createTableRow(item, employeesData, selectedWarehouseId);
+    const rowHtml = createTableRow(item, employeesData, selectedWarehouseId);
+    tableHTML += rowHtml;
   });
+
   tableHTML += `</tbody></table>`;
-  // return tableHTML;
+  return tableHTML;
 }
 
 function shouldCountBalance(item, selectedWarehouseId) {
@@ -789,7 +789,7 @@ function shouldCountBalance(item, selectedWarehouseId) {
   return String(item.warehouse_id) === String(selectedWarehouseId);
 }
 
-function createTableRow(item, employeesData, balance, selectedWarehouseId) {
+function createTableRow(item, employeesData, selectedWarehouseId) {
   const income = item.income !== undefined ? parseFloat(item.income) : 0;
   const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
   const relationType = parseInt(item.relation_type, 10);
@@ -804,14 +804,7 @@ function createTableRow(item, employeesData, balance, selectedWarehouseId) {
   const employeeName = getEmployeeName(item.employee_id, employeesData);
   const documentType = documentTypes[relationType] || "-";
 
-  let currentBalance = 0;
-  const warehouseIdFromInfo = warehouseInfo.match(/\((\d+)\)/)?.[1];
-  if (warehouseIdFromInfo === selectedWarehouseId) {
-    balance = balance - outcome + income;
-    currentBalance = balance;
-  }
-
-  const html = `
+  return `
     <tr>
       <td>${dateStr}</td>
       <td>${item.relation_id_label || "-"}</td>
@@ -821,11 +814,9 @@ function createTableRow(item, employeesData, balance, selectedWarehouseId) {
       <td>${clientInfo}</td>
       <td>${item.income !== undefined ? item.income : "-"}</td>
       <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
-      <td>${currentBalance || "-"}</td>
+      <td>${item.calculatedBalance || "-"}</td>
     </tr>
   `;
-
-  return { html, balance };
 }
 
 function getWarehouseAndClientInfo(item, relationType, income, outcome) {
