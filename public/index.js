@@ -277,7 +277,7 @@ async function loadData() {
 
     let allData = [];
     let currentPage = 1;
-    let totalPages = Math.ceil(241 / 50);
+    let hasMoreData = true;
 
     // Получаем данные о товаре и сотрудниках
     const [initialEntityResponse, initialEmployeeResponse] = await Promise.all([
@@ -303,7 +303,7 @@ async function loadData() {
     console.log("Начинаем сбор данных...");
 
     // Собираем данные по страницам
-    while (currentPage <= totalPages) {
+    while (hasMoreData) {
       const flowResponse = await fetch(
         "https://product-movement.onrender.com/api/proxy/goods-flow-items",
         {
@@ -319,12 +319,6 @@ async function loadData() {
             endDate: 253402300799999,
             tz: "Europe/Kiev",
             id: idInput,
-            // Добавляем фильтрацию на уровне запроса
-            ...(selectedLocationId && selectedWarehouseId
-              ? {
-                  warehouse_id: selectedWarehouseId,
-                }
-              : {}),
           }),
         }
       );
@@ -339,6 +333,8 @@ async function loadData() {
       if (flowData.data && flowData.data.length > 0) {
         allData = [...allData, ...flowData.data];
         currentPage++;
+      } else {
+        hasMoreData = false; // Прекращаем цикл если нет данных
       }
       console.log("Всего собрано записей:", allData.length);
 
