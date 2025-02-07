@@ -608,12 +608,12 @@ function createTable(allData, entityData, employeesData) {
 // Обновляем обработчик события для поля ввода
 function handleKeyDown(event) {
   if (event.key === "Enter") {
-    loadAllData();
+    loadData();
   }
 }
 
 // Обновляем обработчик кнопки загрузки
-document.getElementById("loadButton").onclick = loadAllData;
+document.getElementById("loadButton").onclick = loadData;
 
 function exportToExcel() {
   const ws = XLSX.utils.aoa_to_sheet([
