@@ -1,4 +1,3 @@
-let globalToken = null;
 const puppeteer = require("puppeteer");
 const express = require("express");
 const cors = require("cors");
@@ -62,7 +61,7 @@ app.use((req, res, next) => {
 // app.get("/", (req, res) => {
 //   res.sendFile(path.join(__dirname, "public", "index.html"));
 // });
-/*
+
 app.post("/api/login", async (req, res) => {
   try {
     console.log("Начало обработки логина");
@@ -93,50 +92,6 @@ app.post("/api/login", async (req, res) => {
     console.error("Ошибка в роуте логина:", error);
     res.status(500).json({
       error: "Ошибка сервера при авторизации",
-      details: error.message,
-    });
-  }
-}); */
-// Обновляем функцию аутентификации
-app.post("/api/login", async (req, res) => {
-  try {
-    console.log("Начало обработки логина");
-    const { email, password } = req.body;
-    console.log("Получены данные:", { email, password });
-
-    if (!email || !password) {
-      console.log("Отсутствуют email или password");
-      return res.status(400).json({
-        error: "Email и пароль обязательны",
-        details: { hasEmail: !!email, hasPassword: !!password },
-      });
-    }
-
-    // Получаем токен через API Remonline
-    const authResponse = await axios.post(
-      "https://api.remonline.app/api/authorize/",
-      {
-        email: email,
-        password: password,
-      }
-    );
-
-    if (authResponse.data && authResponse.data.token) {
-      console.log("Токен получен успешно");
-      // Сохраняем токен в глобальной переменной
-      globalToken = authResponse.data.token;
-      res.json({
-        success: true,
-        token: authResponse.data.token,
-      });
-    } else {
-      console.log("Не удалось получить токен");
-      res.status(401).json({ error: "Неверные учетные данные" });
-    }
-  } catch (error) {
-    console.error("Ошибка в роуте логина:", error);
-    res.status(401).json({
-      error: "Ошибка авторизации",
       details: error.message,
     });
   }
@@ -231,7 +186,7 @@ async function getRemonlineCookies() {
     return null;
   }
 }
-/*
+
 async function getRemonlineCookiesForUser(email, password) {
   try {
     const browser = await puppeteer.launch({
@@ -284,25 +239,6 @@ async function getRemonlineCookiesForUser(email, password) {
     }
   } catch (error) {
     console.error("Ошибка запуска браузера:", error);
-    return null;
-  }
-} */
-// Вместо работы с cookies использовать токены
-async function getRemonlineCookiesForUser(email, password) {
-  try {
-    // Получаем токен через API аутентификации
-    const authResponse = await fetch("https://api.remonline.app/auth/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const authData = await authResponse.json();
-    return authData.token; // Возвращаем токен вместо cookies
-  } catch (error) {
-    console.error("Ошибка аутентификации:", error);
     return null;
   }
 }

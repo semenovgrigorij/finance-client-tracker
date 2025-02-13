@@ -9,7 +9,7 @@ window.onload = function () {
   document.getElementById("loadButton").onclick = () => loadData(1);
   populateLocations(); // Перемещаем сюда инициализацию локаций
 };
-/*
+
 async function handleLogin() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -62,54 +62,6 @@ async function handleLogin() {
     } else {
       loginError.textContent = "Виникла помилка при підключенні до сервера";
     }
-    loginError.style.display = "block";
-  } finally {
-    preloader.style.display = "none";
-  }
-} */
-async function handleLogin() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  const loginError = document.getElementById("loginError");
-  const loginForm = document.getElementById("loginForm");
-  const mainContent = document.getElementById("mainContent");
-  const preloader = document.getElementById("preloader");
-
-  try {
-    preloader.style.display = "flex";
-
-    const response = await fetch(
-      "https://product-movement.onrender.com/api/login",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
-    }
-
-    if (data.success && data.token) {
-      // Сохраняем токен в localStorage
-      localStorage.setItem("authToken", data.token);
-      loginForm.style.display = "none";
-      mainContent.style.display = "block";
-      populateLocations();
-    } else {
-      loginError.textContent = data.error || "Помилка входу";
-      loginError.style.display = "block";
-    }
-  } catch (error) {
-    console.error("Ошибка:", error);
-    loginError.textContent = error.message.includes("401")
-      ? "Неправильний логін або пароль"
-      : "Виникла помилка при підключенні до сервера";
     loginError.style.display = "block";
   } finally {
     preloader.style.display = "none";
