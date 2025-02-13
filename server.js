@@ -156,7 +156,7 @@ async function getRemonlineCookies() {
     return null;
   }
 }
-
+/*
 async function getRemonlineCookiesForUser(email, password) {
   try {
     const browser = await puppeteer.launch({
@@ -211,7 +211,46 @@ async function getRemonlineCookiesForUser(email, password) {
     console.error("Ошибка запуска браузера:", error);
     return null;
   }
+} */
+// Вместо работы с cookies использовать токены
+async function getRemonlineCookiesForUser(email, password) {
+  try {
+    // Получаем токен через API аутентификации
+    const authResponse = await fetch("https://api.remonline.app/auth/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const authData = await authResponse.json();
+    return authData.token; // Возвращаем токен вместо cookies
+  } catch (error) {
+    console.error("Ошибка аутентификации:", error);
+    return null;
+  }
 }
+
+// Используем токен в запросах
+app.post("/api/proxy/goods-flow-items", async (req, res) => {
+  try {
+    const response = await axios.post(
+      "https://api.remonline.app/warehouse/items",
+      req.body,
+      {
+        headers: {
+          Authorization: `Bearer ${globalToken}`, // Используем токен
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error("Ошибка:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 const formatCookies = (cookies) => {
   if (!cookies) {
     console.error("Куки не получены");
