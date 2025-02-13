@@ -96,36 +96,6 @@ app.post("/api/login", async (req, res) => {
     });
   }
 });
-
-// Обновляем функцию для работы с API
-app.post("/api/proxy/goods-flow-items", async (req, res) => {
-  try {
-    const { id, page = 1 } = req.body;
-
-    if (!globalToken) {
-      return res.status(401).json({ error: "Требуется авторизация" });
-    }
-
-    const response = await axios.post(
-      "https://api.remonline.app/warehouse/items",
-      { ...req.body, page, id },
-      {
-        headers: {
-          Authorization: `Bearer ${globalToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("Ошибка проксирования:", error);
-    res.status(error.response?.status || 500).json({
-      error: "Ошибка при получении данных",
-      details: error.message,
-    });
-  }
-});
 ////////////
 async function getRemonlineCookies() {
   try {
@@ -242,26 +212,6 @@ async function getRemonlineCookiesForUser(email, password) {
     return null;
   }
 }
-
-// Используем токен в запросах
-app.post("/api/proxy/goods-flow-items", async (req, res) => {
-  try {
-    const response = await axios.post(
-      "https://api.remonline.app/warehouse/items",
-      req.body,
-      {
-        headers: {
-          Authorization: `Bearer ${globalToken}`, // Используем токен
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    res.json(response.data);
-  } catch (error) {
-    console.error("Ошибка:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 const formatCookies = (cookies) => {
   if (!cookies) {
     console.error("Куки не получены");
