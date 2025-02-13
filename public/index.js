@@ -9,6 +9,7 @@ window.onload = function () {
   document.getElementById("loadButton").onclick = () => loadData(1);
   populateLocations(); // Перемещаем сюда инициализацию локаций
 };
+/*
 async function handleLogin() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -65,8 +66,121 @@ async function handleLogin() {
   } finally {
     preloader.style.display = "none";
   }
+} */
+async function handleLogin() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const loginError = document.getElementById("loginError");
+  const loginForm = document.getElementById("loginForm");
+  const mainContent = document.getElementById("mainContent");
+  const preloader = document.getElementById("preloader");
+
+  try {
+    preloader.style.display = "flex";
+
+    const response = await fetch(
+      "https://product-movement.onrender.com/api/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    if (data.success && data.token) {
+      // Сохраняем токен в localStorage
+      localStorage.setItem("authToken", data.token);
+      loginForm.style.display = "none";
+      mainContent.style.display = "block";
+      populateLocations();
+    } else {
+      loginError.textContent = data.error || "Помилка входу";
+      loginError.style.display = "block";
+    }
+  } catch (error) {
+    console.error("Ошибка:", error);
+    loginError.textContent = error.message.includes("401")
+      ? "Неправильний логін або пароль"
+      : "Виникла помилка при підключенні до сервера";
+    loginError.style.display = "block";
+  } finally {
+    preloader.style.display = "none";
+  }
 }
 
+// Обновляем функцию загрузки данных
+async function loadData() {
+  try {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      throw new Error("Необхідна авторизація");
+    }
+
+    const idInput = document.getElementById("idInput").value;
+    // ... остальной код функции loadData
+
+    const response = await fetch(
+      "https://product-movement.onrender.com/api/proxy/goods-flow-items",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: idInput,
+          page: 1,
+          // ... другие параметры
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem("authToken");
+        handleLogout();
+        throw new Error("Сесія застаріла. Будь ласка, увійдіть знову");
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // ... обработка полученных данных
+  } catch (error) {
+    console.error("Ошибка:", error);
+    document.getElementById(
+      "result"
+    ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
+  }
+}
+
+// Обновляем функцию выхода
+function handleLogout() {
+  localStorage.removeItem("authToken");
+  const loginForm = document.getElementById("loginForm");
+  const mainContent = document.getElementById("mainContent");
+
+  document.getElementById("email").value = "";
+  document.getElementById("password").value = "";
+  document.getElementById("loginError").style.display = "none";
+  loginForm.reset();
+
+  loginForm.style.display = "block";
+  mainContent.style.display = "none";
+  document.getElementById("result").innerHTML = "";
+
+  if (window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
 function handleLogout() {
   const loginForm = document.getElementById("loginForm");
   const mainContent = document.getElementById("mainContent");
