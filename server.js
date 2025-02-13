@@ -1,3 +1,4 @@
+let globalToken = null;
 const puppeteer = require("puppeteer");
 const express = require("express");
 const cors = require("cors");
@@ -61,7 +62,7 @@ app.use((req, res, next) => {
 // app.get("/", (req, res) => {
 //   res.sendFile(path.join(__dirname, "public", "index.html"));
 // });
-
+/*
 app.post("/api/login", async (req, res) => {
   try {
     console.log("Начало обработки логина");
@@ -92,6 +93,80 @@ app.post("/api/login", async (req, res) => {
     console.error("Ошибка в роуте логина:", error);
     res.status(500).json({
       error: "Ошибка сервера при авторизации",
+      details: error.message,
+    });
+  }
+}); */
+// Обновляем функцию аутентификации
+app.post("/api/login", async (req, res) => {
+  try {
+    console.log("Начало обработки логина");
+    const { email, password } = req.body;
+    console.log("Получены данные:", { email, password });
+
+    if (!email || !password) {
+      console.log("Отсутствуют email или password");
+      return res.status(400).json({
+        error: "Email и пароль обязательны",
+        details: { hasEmail: !!email, hasPassword: !!password },
+      });
+    }
+
+    // Получаем токен через API Remonline
+    const authResponse = await axios.post(
+      "https://api.remonline.app/api/authorize/",
+      {
+        email: email,
+        password: password,
+      }
+    );
+
+    if (authResponse.data && authResponse.data.token) {
+      console.log("Токен получен успешно");
+      // Сохраняем токен в глобальной переменной
+      globalToken = authResponse.data.token;
+      res.json({
+        success: true,
+        token: authResponse.data.token,
+      });
+    } else {
+      console.log("Не удалось получить токен");
+      res.status(401).json({ error: "Неверные учетные данные" });
+    }
+  } catch (error) {
+    console.error("Ошибка в роуте логина:", error);
+    res.status(401).json({
+      error: "Ошибка авторизации",
+      details: error.message,
+    });
+  }
+});
+
+// Обновляем функцию для работы с API
+app.post("/api/proxy/goods-flow-items", async (req, res) => {
+  try {
+    const { id, page = 1 } = req.body;
+
+    if (!globalToken) {
+      return res.status(401).json({ error: "Требуется авторизация" });
+    }
+
+    const response = await axios.post(
+      "https://api.remonline.app/warehouse/items",
+      { ...req.body, page, id },
+      {
+        headers: {
+          Authorization: `Bearer ${globalToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Ошибка проксирования:", error);
+    res.status(error.response?.status || 500).json({
+      error: "Ошибка при получении данных",
       details: error.message,
     });
   }
