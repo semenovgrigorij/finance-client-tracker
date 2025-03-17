@@ -76,6 +76,33 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// Добавьте в server.js перед обработчиком /api/login
+// Тестовый метод аутентификации (ТОЛЬКО ДЛЯ РАЗРАБОТКИ)
+app.post("/api/login-test", async (req, res) => {
+  try {
+    console.log("Тестовый вход в систему");
+    const { email, password } = req.body;
+
+    // Здесь должна быть ваша реальная логика проверки учетных данных
+    // Для тестирования используем фиксированные учетные данные
+    if (email === "test@example.com" && password === "testpassword") {
+      // Создаем фиктивные cookies для тестирования
+      globalCookies = [
+        { name: "token", value: "test-token" },
+        { name: "refresh_token", value: "test-refresh-token" },
+        { name: "csrftoken", value: "test-csrf-token" },
+      ];
+
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Неверные учетные данные" });
+    }
+  } catch (error) {
+    console.error("Ошибка:", error);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
 // Авторизация
 app.post("/api/login", async (req, res) => {
   try {
@@ -676,6 +703,9 @@ app.post("/api/proxy/client-transfers", async (req, res) => {
 async function getRemonlineCookiesForUser(email, password) {
   try {
     console.log("Запускаем браузер для авторизации...");
+    const executablePath =
+      process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
+    console.log("Путь к исполняемому файлу браузера:", executablePath);
     const browser = await puppeteer.launch({
       headless: "new",
       args: [
@@ -686,8 +716,7 @@ async function getRemonlineCookiesForUser(email, password) {
         "--disable-gpu",
         "--single-process",
       ],
-      // Для Windows, по умолчанию использует Chrome
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: executablePath,
     });
 
     const page = await browser.newPage();
@@ -746,6 +775,7 @@ async function getRemonlineCookiesForUser(email, password) {
     }
   } catch (error) {
     console.error("Ошибка запуска браузера:", error);
+    console.error("Детали ошибки:", error.stack);
     return null;
   }
 }
