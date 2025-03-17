@@ -1,6 +1,8 @@
 {
-  "name": "remonline-proxy",
+  "name": "finance-client-tracker",
   "version": "1.0.0",
+  "description": "Client finance tracking application",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",

@@ -1,14 +1,1044 @@
+// Функция для отображения результатов поиска
+function displaySearchResults(clients) {
+  const resultsContainer = document.getElementById("clientSearchResults");
+  resultsContainer.innerHTML = "";
+
+  if (clients.length === 0) {
+    resultsContainer.innerHTML =
+      '<p class="no-results">Клієнтів не знайдено</p>';
+    resultsContainer.style.display = "block";
+    return;
+  }
+
+  // Добавим строку количества найденных клиентов
+  const countInfo = document.createElement("div");
+  countInfo.className = "search-count";
+  countInfo.textContent = `Знайдено: ${clients.length} клієнтів`;
+  resultsContainer.appendChild(countInfo);
+
+  const resultsList = document.createElement("ul");
+  resultsList.className = "client-list";
+
+  const searchQuery = document
+    .getElementById("clientSearchInput")
+    .value.trim()
+    .toLowerCase();
+
+  clients.forEach((client) => {
+    const listItem = document.createElement("li");
+    listItem.className = "client-item";
+
+    // Определяем релевантность результата
+    const clientName = client.name ? client.name.toLowerCase() : "";
+    if (clientName.startsWith(searchQuery)) {
+      listItem.classList.add("exact-match");
+    } else if (clientName.includes(searchQuery)) {
+      listItem.classList.add("partial-match");
+    }
+
+    listItem.dataset.id = client.id;
+
+    // Форматируем телефон, если есть
+    let phoneInfo = "";
+    if (client.phone && client.phone.length > 0) {
+      phoneInfo = `<span class="client-phone">${client.phone[0].phone}</span>`;
+    }
+
+    // Добавляем адрес, если есть
+    let addressInfo = "";
+    if (client.address) {
+      addressInfo = `<div class="client-address">${client.address}</div>`;
+    }
+
+    listItem.innerHTML = `
+      <div class="client-name">${client.name}</div>
+      ${phoneInfo}
+      ${addressInfo}
+      <div class="client-id">ID: ${client.id}</div>
+    `;
+
+    // Добавляем обработчик клика для выбора клиента
+    listItem.addEventListener("click", function () {
+      selectClient(client);
+    });
+
+    resultsList.appendChild(listItem);
+  });
+
+  resultsContainer.appendChild(resultsList);
+  resultsContainer.style.display = "block";
+}
+
+// Функция для выбора клиента из результатов поиска
+function selectClient(client) {
+  const idInput = document.getElementById("idInput");
+  const resultsContainer = document.getElementById("clientSearchResults");
+
+  idInput.value = client.id;
+  resultsContainer.style.display = "none";
+
+  // Сразу загружаем данные для выбранного клиента
+  loadData();
+
+  // Показываем уведомление
+  showNotification("success", `Обрано клієнта: ${client.name}`);
+}
+
+// Функции для работы с периодами дат
+
+// Функция для получения диапазона дат на основе выбранного периода
+function getDateRange(periodType) {
+  const now = new Date();
+  let startDate, endDate;
+
+  switch (periodType) {
+    case "today": // Сьогодні
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0,
+        0,
+        0
+      );
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59
+      );
+      break;
+
+    case "yesterday": // Вчора
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 1,
+        0,
+        0,
+        0
+      );
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 1,
+        23,
+        59,
+        59
+      );
+      break;
+
+    case "current_week": // Цей тиждень
+      const dayOfWeek = now.getDay();
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Делаем понедельник первым днем недели
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - diff,
+        0,
+        0,
+        0
+      );
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + (6 - diff),
+        23,
+        59,
+        59
+      );
+      break;
+
+    case "current_month": // Поточний місяць
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      break;
+
+    case "previous_week": // Минулий тиждень
+      const lastDayOfWeek = now.getDay();
+      const lastDiff = lastDayOfWeek === 0 ? 6 : lastDayOfWeek - 1;
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - lastDiff - 7,
+        0,
+        0,
+        0
+      );
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - lastDiff - 1,
+        23,
+        59,
+        59
+      );
+      break;
+
+    case "previous_month": // Минулий місяць
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      break;
+
+    case "custom": // Обрати дати - в этом случае даты должны быть заданы отдельно
+      return null;
+
+    default: // По умолчанию - все время
+      startDate = new Date(2000, 0, 1);
+      endDate = new Date(2100, 11, 31);
+      break;
+  }
+
+  return { startDate, endDate };
+}
+
+// Функция для форматирования даты в строку для отображения
+function formatDateForDisplay(date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+// Функция для преобразования даты в формат для API (секунды)
+function formatDateForApi(date) {
+  if (!date) return 0;
+
+  // Преобразуем в секунды
+  return Math.floor(date.getTime() / 1000);
+}
+
+// Функция для создания селектора периода в пользовательском интерфейсе
+function createPeriodSelector() {
+  // Контейнер для блока выбора периода
+  const periodSelectorContainer = document.createElement("div");
+  periodSelectorContainer.className = "period-selector-container";
+
+  // Создаем заголовок (лейбл) для селектора
+  const periodLabel = document.createElement("label");
+  periodLabel.textContent = "Період:";
+  periodLabel.setAttribute("for", "periodSelector");
+  periodLabel.className = "period-selector-label";
+
+  // Создаем селектор с выпадающим списком
+  const periodSelector = document.createElement("div");
+  periodSelector.className = "period-selector";
+  periodSelector.id = "periodSelector";
+
+  // Создаем поле отображения текущего выбора
+  const selectedPeriod = document.createElement("div");
+  selectedPeriod.className = "selected-period";
+  selectedPeriod.textContent = "Всі дані";
+
+  // Создаем иконку "стрелка вниз"
+  const arrowIcon = document.createElement("span");
+  arrowIcon.className = "arrow-icon";
+  arrowIcon.innerHTML = "&#9660;"; // HTML-символ стрелки вниз
+
+  // Создаем элемент для отображения дат вместо стандартного текста
+  const dateRangeDisplay = document.createElement("div");
+  dateRangeDisplay.className = "date-range-display";
+  dateRangeDisplay.id = "dateRangeDisplay";
+  dateRangeDisplay.style.display = "none";
+
+  // Создаем выпадающий список
+  const dropdownList = document.createElement("div");
+  dropdownList.className = "period-dropdown";
+  dropdownList.style.display = "none";
+
+  // Опции для выпадающего списка
+  const options = [
+    { value: "all", label: "Всі дані" },
+    { value: "today", label: "Сьогодні" },
+    { value: "yesterday", label: "Вчора" },
+    { value: "current_week", label: "Цей тиждень" },
+    { value: "current_month", label: "Поточний місяць" },
+    { value: "previous_week", label: "Минулий тиждень" },
+    { value: "previous_month", label: "Минулий місяць" },
+    { value: "custom", label: "Обрати дати" },
+  ];
+
+  // Создаем элементы списка
+  options.forEach((option) => {
+    const listItem = document.createElement("div");
+    listItem.className = "period-option";
+    listItem.textContent = option.label;
+    listItem.dataset.value = option.value;
+
+    // Обработчик выбора периода
+    listItem.addEventListener("click", function () {
+      const selectedValue = this.dataset.value;
+
+      // Обновляем отображаемый текст и закрываем выпадающий список
+      selectedPeriod.textContent = this.textContent;
+      dropdownList.style.display = "none";
+
+      // Сохраняем выбранный период в localStorage
+      saveToLocalStorage("selectedPeriod", selectedValue);
+
+      // Если выбраны кастомные даты, показываем диалог выбора дат
+      if (selectedValue === "custom") {
+        showDatePickerDialog();
+      } else {
+        // Иначе обновляем диапазон дат и загружаем данные
+        updateDateRangeDisplay(selectedValue);
+        loadData(); // Перезагружаем данные с новым периодом
+      }
+    });
+
+    dropdownList.appendChild(listItem);
+  });
+
+  // Обработчик клика на селектор (открытие/закрытие выпадающего списка)
+  periodSelector.addEventListener("click", function (event) {
+    event.stopPropagation(); // Предотвращаем всплытие события
+    dropdownList.style.display =
+      dropdownList.style.display === "none" ? "block" : "none";
+  });
+
+  // Закрытие выпадающего списка при клике вне его
+  document.addEventListener("click", function (event) {
+    if (!periodSelector.contains(event.target)) {
+      dropdownList.style.display = "none";
+    }
+  });
+
+  // Собираем все элементы вместе
+  periodSelector.appendChild(selectedPeriod);
+  periodSelector.appendChild(arrowIcon);
+  periodSelector.appendChild(dropdownList);
+
+  periodSelectorContainer.appendChild(periodLabel);
+  periodSelectorContainer.appendChild(periodSelector);
+  periodSelectorContainer.appendChild(dateRangeDisplay);
+
+  return periodSelectorContainer;
+}
+
+// Функция для отображения диалога выбора произвольных дат
+function showDatePickerDialog() {
+  // Проверяем, существует ли уже диалог
+  let datePickerDialog = document.getElementById("datePickerDialog");
+
+  if (!datePickerDialog) {
+    // Создаем модальный диалог
+    datePickerDialog = document.createElement("div");
+    datePickerDialog.id = "datePickerDialog";
+    datePickerDialog.className = "date-picker-dialog";
+
+    // Создаем содержимое диалога
+    datePickerDialog.innerHTML = `
+      <div class="date-picker-content">
+        <h3>Виберіть період дат</h3>
+        <div class="date-inputs">
+          <div class="date-input-group">
+            <label for="startDatePicker">Дата початку:</label>
+            <input type="date" id="startDatePicker" class="date-input">
+          </div>
+          <div class="date-input-group">
+            <label for="endDatePicker">Дата кінця:</label>
+            <input type="date" id="endDatePicker" class="date-input">
+          </div>
+        </div>
+        <div class="date-picker-buttons">
+          <button type="button" id="applyDateRange" class="apply-button">Застосувати</button>
+          <button type="button" id="cancelDateRange" class="cancel-button">Скасувати</button>
+        </div>
+      </div>
+    `;
+
+    // Добавляем диалог в документ
+    document.body.appendChild(datePickerDialog);
+
+    // Получаем текущие даты из localStorage или устанавливаем текущую дату
+    const savedStartDate = getFromLocalStorage("customStartDate");
+    const savedEndDate = getFromLocalStorage("customEndDate");
+
+    const startDatePicker = document.getElementById("startDatePicker");
+    const endDatePicker = document.getElementById("endDatePicker");
+
+    // Устанавливаем начальные значения
+    if (savedStartDate) {
+      startDatePicker.value = formatDateForInput(new Date(savedStartDate));
+    } else {
+      const defaultStart = new Date();
+      defaultStart.setMonth(defaultStart.getMonth() - 1); // По умолчанию - месяц назад
+      startDatePicker.value = formatDateForInput(defaultStart);
+    }
+
+    if (savedEndDate) {
+      endDatePicker.value = formatDateForInput(new Date(savedEndDate));
+    } else {
+      endDatePicker.value = formatDateForInput(new Date());
+    }
+
+    // Обработчик кнопки "Отмена"
+    document
+      .getElementById("cancelDateRange")
+      .addEventListener("click", function () {
+        // Возвращаем предыдущее значение в селекторе
+        const prevPeriod = getFromLocalStorage("selectedPeriod") || "all";
+        if (prevPeriod !== "custom") {
+          document.querySelector(".selected-period").textContent =
+            document.querySelector(
+              `.period-option[data-value="${prevPeriod}"]`
+            ).textContent;
+          saveToLocalStorage("selectedPeriod", prevPeriod);
+          updateDateRangeDisplay(prevPeriod);
+        }
+
+        // Закрываем диалог
+        datePickerDialog.remove();
+      });
+  } else {
+    // Если диалог уже существует, просто показываем его
+    datePickerDialog.style.display = "block";
+  }
+}
+
+// Функция для форматирования даты для input type="date"
+function formatDateForInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Функция для обновления отображения диапазона дат
+function updateDateRangeDisplay(periodType) {
+  const dateRangeDisplay = document.getElementById("dateRangeDisplay");
+
+  if (periodType === "all") {
+    dateRangeDisplay.style.display = "none";
+    // Очищаем сохраненные даты при выборе "Все данные"
+    saveToLocalStorage("startDate", null);
+    saveToLocalStorage("endDate", null);
+    return;
+  }
+
+  if (periodType === "custom") {
+    // Для кастомного периода берем сохраненные даты
+    const savedStartDate = getFromLocalStorage("customStartDate");
+    const savedEndDate = getFromLocalStorage("customEndDate");
+
+    if (savedStartDate && savedEndDate) {
+      const startDate = new Date(parseInt(savedStartDate));
+      const endDate = new Date(parseInt(savedEndDate));
+      updateCustomDateRangeDisplay(startDate, endDate);
+    }
+    return;
+  }
+
+  // Для стандартных периодов
+  const dateRange = getDateRange(periodType);
+  if (dateRange) {
+    const { startDate, endDate } = dateRange;
+    const formattedStart = formatDateForDisplay(startDate);
+    const formattedEnd = formatDateForDisplay(endDate);
+
+    dateRangeDisplay.textContent = `${formattedStart} — ${formattedEnd}`;
+    dateRangeDisplay.style.display = "block";
+
+    // Сохраняем даты для использования в запросах
+    // Преобразуем в секунды, как требует API Remonline
+    saveToLocalStorage("startDate", formatDateForApi(startDate));
+    saveToLocalStorage("endDate", formatDateForApi(endDate));
+
+    // Логируем для отладки
+    console.log("Период:", periodType);
+    console.log(
+      "Начальная дата:",
+      startDate.toISOString(),
+      "(" + formatDateForApi(startDate) + ")"
+    );
+    console.log(
+      "Конечная дата:",
+      endDate.toISOString(),
+      "(" + formatDateForApi(endDate) + ")"
+    );
+  }
+}
+
+// Функция для обновления отображения произвольного диапазона дат
+function updateCustomDateRangeDisplay(startDate, endDate) {
+  const dateRangeDisplay = document.getElementById("dateRangeDisplay");
+  const formattedStart = formatDateForDisplay(startDate);
+  const formattedEnd = formatDateForDisplay(endDate);
+
+  dateRangeDisplay.textContent = `${formattedStart} — ${formattedEnd}`;
+  dateRangeDisplay.style.display = "block";
+
+  // Преобразуем в секунды для API
+  saveToLocalStorage("startDate", formatDateForApi(startDate));
+  saveToLocalStorage("endDate", formatDateForApi(endDate));
+
+  // Логируем для отладки
+  console.log("Пользовательский период");
+  console.log(
+    "Начальная дата:",
+    startDate.toISOString(),
+    "(" + formatDateForApi(startDate) + ")"
+  );
+  console.log(
+    "Конечная дата:",
+    endDate.toISOString(),
+    "(" + formatDateForApi(endDate) + ")"
+  );
+}
+
+// Функция инициализации селектора периода
+function initializePeriodSelector() {
+  // Проверяем, существует ли уже селектор периода
+  if (document.querySelector(".period-selector-container")) {
+    console.log("Селектор периода уже существует, пропускаем инициализацию");
+    return;
+  }
+
+  // Находим контейнер формы, куда добавим селектор периода
+  const formGroup = document.querySelector(".form-group-id");
+  if (!formGroup) return;
+
+  console.log("Инициализация селектора периода");
+
+  // Создаем селектор периода
+  const periodSelector = createPeriodSelector();
+
+  // Добавляем селектор в форму после поля ввода ID
+  formGroup.parentNode.insertBefore(periodSelector, formGroup.nextSibling);
+
+  // Восстанавливаем выбранный период из localStorage
+  const savedPeriod = getFromLocalStorage("selectedPeriod") || "all";
+  const selectedLabel =
+    document.querySelector(`.period-option[data-value="${savedPeriod}"]`)
+      ?.textContent || "Всі дані";
+
+  document.querySelector(".selected-period").textContent = selectedLabel;
+
+  // Обновляем отображение диапазона дат
+  updateDateRangeDisplay(savedPeriod);
+}
+
+// Обработчик кнопки "Применить" для кастомных дат
+document.addEventListener("click", function (event) {
+  if (event.target && event.target.id === "applyDateRange") {
+    const startDatePicker = document.getElementById("startDatePicker");
+    const endDatePicker = document.getElementById("endDatePicker");
+
+    if (!startDatePicker || !endDatePicker) return;
+
+    const startDate = new Date(startDatePicker.value);
+    const endDate = new Date(endDatePicker.value);
+
+    // Устанавливаем время
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Проверяем корректность дат
+    if (startDate > endDate) {
+      showNotification(
+        "error",
+        "Дата початку не може бути пізніше дати закінчення"
+      );
+      return;
+    }
+
+    // Сохраняем выбранные даты
+    saveToLocalStorage("customStartDate", startDate.getTime());
+    saveToLocalStorage("customEndDate", endDate.getTime());
+
+    // Важно! Также сохраняем даты в формате для API (секунды)
+    saveToLocalStorage("startDate", formatDateForApi(startDate));
+    saveToLocalStorage("endDate", formatDateForApi(endDate));
+
+    // Обновляем отображение диапазона дат
+    updateCustomDateRangeDisplay(startDate, endDate);
+
+    // Закрываем диалог
+    const datePickerDialog = document.getElementById("datePickerDialog");
+    if (datePickerDialog) {
+      datePickerDialog.remove();
+    }
+
+    // Загружаем данные с новым периодом
+    loadData();
+  }
+});
+
+// Модифицируем функцию загрузки данных для учета выбранного периода
+async function loadData() {
+  // Сохраняем выбор пользователя
+  saveUserSelection();
+
+  const clientId = document.getElementById("idInput").value;
+
+  if (!clientId) {
+    document.getElementById(
+      "result"
+    ).innerHTML = `<p style="color: red;">Введіть ID клієнта</p>`;
+    showNotification("error", "Введіть ID клієнта");
+    return;
+  }
+
+  try {
+    const preloader = document.getElementById("preloader");
+    preloader.style.display = "flex";
+
+    // Получаем данные о клиенте
+    const clientResponse = await fetch("/api/proxy/get-client", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: clientId }),
+    });
+
+    const clientData = await clientResponse.json();
+
+    // Получаем временной период из localStorage
+    const selectedPeriod = getFromLocalStorage("selectedPeriod") || "all";
+    let startDate = getFromLocalStorage("startDate");
+    let endDate = getFromLocalStorage("endDate");
+
+    // Значения для API
+    let apiStartDate = 0; // Значение по умолчанию - с начала времен
+    let apiEndDate = Math.floor(Date.now() / 1000) + 31536000; // Текущее время + 1 год (в секундах)
+
+    // Если выбран период, используем его временные рамки
+    if (selectedPeriod !== "all" && startDate && endDate) {
+      apiStartDate = parseInt(startDate);
+      apiEndDate = parseInt(endDate);
+
+      // Для диагностики
+      console.log("Используем временной диапазон:");
+      console.log(
+        "Начало периода:",
+        new Date(apiStartDate * 1000).toISOString(),
+        "(" + apiStartDate + ")"
+      );
+      console.log(
+        "Конец периода:",
+        new Date(apiEndDate * 1000).toISOString(),
+        "(" + apiEndDate + ")"
+      );
+    } else {
+      console.log("Используем весь временной диапазон");
+    }
+
+    // Обновление UI для показа процесса загрузки
+    const result = document.getElementById("result");
+    result.innerHTML = `<div class="loading-progress">Завантаження даних... Сторінка 1</div>`;
+
+    // Реализация пагинации с обработкой ошибок
+    let allTransfers = [];
+    let currentPage = 1;
+    let hasMoreData = true;
+    const pageSize = 500; // Уменьшаем размер страницы для стабильности
+    let errorCount = 0;
+    const maxErrors = 3; // Максимальное количество ошибок, после которого прерываем загрузку
+
+    // Получаем все финансовые операции клиента постранично
+    while (hasMoreData && errorCount < maxErrors) {
+      try {
+        // Обновляем информацию о прогрессе
+        document.querySelector(
+          ".loading-progress"
+        ).textContent = `Завантаження даних... Сторінка ${currentPage} (Завантажено записів: ${allTransfers.length})`;
+
+        // Формируем запрос с учетом периода
+        const requestBody = {
+          client_id: clientId,
+          page: currentPage,
+          take: pageSize,
+          pageSize: pageSize,
+          skip: (currentPage - 1) * pageSize,
+          sort: {},
+        };
+
+        // Добавляем параметры фильтрации только если выбран конкретный период
+        if (selectedPeriod !== "all") {
+          requestBody.startDate = apiStartDate;
+          requestBody.endDate = apiEndDate;
+          requestBody.tz = "Europe/Kiev";
+        }
+
+        console.log("Запрос данных:", requestBody);
+
+        const response = await fetch("/api/proxy/client-transfers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          errorCount++;
+          console.warn(
+            `Ошибка при загрузке страницы ${currentPage}. Попытка: ${errorCount}/${maxErrors}`
+          );
+
+          if (errorCount >= maxErrors) {
+            console.error(
+              `Достигнуто максимальное количество ошибок (${maxErrors}). Прекращаем загрузку.`
+            );
+            // Если уже есть какие-то данные, продолжаем с ними
+            if (allTransfers.length > 0) {
+              hasMoreData = false;
+              break;
+            } else {
+              throw new Error(
+                `Не удалось загрузить данные после ${maxErrors} попыток`
+              );
+            }
+          }
+
+          // Делаем паузу перед следующей попыткой
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          continue;
+        }
+
+        const transfersData = await response.json();
+
+        console.log(
+          `Получено ${
+            transfersData.data?.length || 0
+          } записей на странице ${currentPage}`
+        );
+
+        // Если получили данные, добавляем их к общему массиву
+        if (transfersData.data && transfersData.data.length > 0) {
+          // Фильтруем данные по дате непосредственно на стороне клиента для подстраховки
+          let filteredData = transfersData.data;
+
+          // Дополнительная фильтрация, если выбран период (дублирующая, для надежности)
+          if (selectedPeriod !== "all" && apiStartDate && apiEndDate) {
+            filteredData = transfersData.data.filter((item) => {
+              const recordTimestamp = Math.floor(
+                new Date(item.created_at).getTime() / 1000
+              );
+              return (
+                recordTimestamp >= apiStartDate && recordTimestamp <= apiEndDate
+              );
+            });
+
+            console.log(
+              `Отфильтровано ${filteredData.length} из ${transfersData.data.length} записей`
+            );
+          }
+
+          allTransfers = [...allTransfers, ...filteredData];
+          currentPage++;
+
+          // Если получили меньше записей, чем pageSize, значит это последняя страница
+          if (transfersData.data.length < pageSize) {
+            hasMoreData = false;
+          }
+
+          // Ограничим максимальное количество страниц для предотвращения перегрузки
+          if (currentPage > 30) {
+            showNotification(
+              "warning",
+              "Дані обмежені 30 сторінками для стабільності"
+            );
+            hasMoreData = false;
+          }
+
+          // Небольшая пауза между запросами, чтобы не перегружать API
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        } else {
+          hasMoreData = false;
+        }
+      } catch (pageError) {
+        console.error(
+          `Ошибка при загрузке страницы ${currentPage}:`,
+          pageError
+        );
+        errorCount++;
+
+        if (errorCount >= maxErrors) {
+          console.error(
+            `Достигнуто максимальное количество ошибок (${maxErrors}). Прекращаем загрузку.`
+          );
+          // Если уже есть какие-то данные, продолжаем с ними
+          if (allTransfers.length > 0) {
+            hasMoreData = false;
+            break;
+          } else {
+            throw new Error(
+              `Не удалось загрузить данные после ${maxErrors} попыток`
+            );
+          }
+        }
+
+        // Делаем паузу перед следующей попыткой
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
+    // Проверяем наличие данных после загрузки всех страниц
+    if (allTransfers.length === 0) {
+      document.getElementById("result").innerHTML = `
+        <p style="color: red;">Інформація по фінансовим операціям для цього клієнта відсутня за обраний період</p>
+      `;
+      showNotification(
+        "warning",
+        "Інформація по фінансовим операціям для цього клієнта відсутня за обраний період"
+      );
+      preloader.style.display = "none";
+      return;
+    }
+
+    console.log(`Всего загружено ${allTransfers.length} записей`);
+
+    // Формируем данные в едином формате для обработки
+    const formattedTransfers = allTransfers.map((item) => ({
+      id: item.id,
+      created_at: item.created_at,
+      employee: {
+        fullname: item.created_by_fullname,
+      },
+      amount: parseFloat(item.amount) || 0,
+      document_id: item.document?.id,
+      document_label: item.document?.id_label,
+      document_type: item.document?.type,
+      dataSource: "transfers",
+    }));
+
+    // Получаем сотрудников для отображения имен
+    const employeesResponse = await fetch(
+      "/api/proxy/get-employees-and-invites",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+
+    const employeesData = await employeesResponse.json();
+
+    // Добавляем информацию о периоде в заголовок таблицы
+    const periodText =
+      selectedPeriod !== "all"
+        ? ` за період: ${
+            document.getElementById("dateRangeDisplay").textContent
+          }`
+        : "";
+
+    // Создаем таблицу финансовых операций со всеми загруженными данными
+    document.getElementById("result").innerHTML = createFinanceTableHTML(
+      formattedTransfers,
+      clientData,
+      employeesData,
+      periodText // Передаем информацию о периоде
+    );
+
+    showNotification(
+      "success",
+      `Завантажено ${allTransfers.length} фінансових операцій${periodText}`
+    );
+  } catch (error) {
+    console.error("Ошибка:", error);
+    document.getElementById(
+      "result"
+    ).innerHTML = `<p style="color: red;">Помилка: ${error.message}</p>`;
+    showNotification("error", `Помилка: ${error.message}`);
+  } finally {
+    preloader.style.display = "none";
+  }
+}
+
+// Код window.onload
+window.onload = function () {
+  document.getElementById("loadButton").onclick = () => loadData();
+
+  // Функция для инициализации поиска клиентов с повторными попытками
+  function initClientSearch() {
+    // Сначала проверяем авторизацию
+    checkAuthStatus()
+      .then((isAuthorized) => {
+        if (isAuthorized) {
+          console.log("Пользователь авторизован, настраиваем поиск клиентов");
+
+          // Пытаемся инициализировать поиск клиента сразу
+          if (typeof setupClientSearch === "function") {
+            setupClientSearch();
+          }
+
+          // И также с небольшой задержкой, чтобы DOM точно был готов
+          setTimeout(() => {
+            if (typeof setupClientSearch === "function") {
+              setupClientSearch();
+            }
+
+            // Инициализируем селектор периода только один раз после загрузки страницы
+            initializePeriodSelector();
+          }, 1000);
+
+          // Восстанавливаем последние выбранные значения
+          restoreUserSelection();
+        } else {
+          console.log("Пользователь не авторизован");
+        }
+      })
+      .catch((error) => {
+        console.error("Ошибка при проверке авторизации:", error);
+      });
+  }
+
+  // Вызываем инициализацию поиска
+  initClientSearch();
+
+  // Также вызываем инициализацию при изменении видимости основного контента
+  const mainContent = document.getElementById("mainContent");
+  if (mainContent) {
+    // Создаем наблюдатель за изменениями стиля display
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.attributeName === "style" &&
+          mainContent.style.display !== "none"
+        ) {
+          console.log("Контент стал видимым, инициализируем поиск клиентов");
+
+          // Инициализируем поиск клиентов после того как контент стал видимым
+          if (typeof setupClientSearch === "function") {
+            setupClientSearch();
+          }
+
+          // Инициализируем селектор периода (безопасно, без дублирования)
+          initializePeriodSelector();
+        }
+      });
+    });
+
+    // Начинаем наблюдение
+    observer.observe(mainContent, { attributes: true });
+  }
+
+  // Периодически проверяем статус авторизации (каждые 5 минут)
+  setInterval(checkAuthStatus, 5 * 60 * 1000);
+};
 let tableData = [];
+
 function handleKeyDown(event) {
   if (event.key === "Enter") {
     loadData();
   }
 }
 
-window.onload = function () {
-  document.getElementById("loadButton").onclick = () => loadData(1);
-  populateLocations(); // Перемещаем сюда инициализацию локаций
-};
+// Функции для работы с localStorage
+function saveToLocalStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Ошибка при сохранении в localStorage: ${error.message}`);
+  }
+}
+
+function getFromLocalStorage(key) {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : null;
+  } catch (error) {
+    console.error(`Ошибка при чтении из localStorage: ${error.message}`);
+    return null;
+  }
+}
+
+// Функция для сохранения выбранного ID клиента
+function saveUserSelection() {
+  const clientId = document.getElementById("idInput").value;
+
+  if (clientId) {
+    saveToLocalStorage("lastClientId", clientId);
+  }
+}
+
+// Функция для восстановления последних выбранных значений
+function restoreUserSelection() {
+  const lastClientId = getFromLocalStorage("lastClientId");
+
+  if (lastClientId) {
+    document.getElementById("idInput").value = lastClientId;
+  }
+}
+
+// Функция для проверки статуса авторизации
+async function checkAuthStatus() {
+  try {
+    const response = await fetch("/api/auth-status");
+    const data = await response.json();
+
+    if (!data.authorized) {
+      console.log("Сессия истекла, перенаправляем на страницу входа");
+      showNotification(
+        "warning",
+        "Сесія завершена. Необхідна повторна авторизація.",
+        10000
+      );
+
+      // Небольшая задержка, чтобы пользователь успел увидеть уведомление
+      setTimeout(() => {
+        handleLogout();
+      }, 2000);
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Ошибка при проверке статуса авторизации:", error);
+    return false;
+  }
+}
+
+// Функция для отображения уведомлений
+function showNotification(type, message, duration = 3000) {
+  // Проверяем, существует ли контейнер для уведомлений
+  let notificationContainer = document.getElementById("notificationContainer");
+
+  if (!notificationContainer) {
+    notificationContainer = document.createElement("div");
+    notificationContainer.id = "notificationContainer";
+    document.body.appendChild(notificationContainer);
+  }
+
+  // Создаем новое уведомление
+  const notification = document.createElement("div");
+  notification.classList.add("notification", `notification-${type}`);
+
+  // Добавляем текст и кнопку закрытия
+  notification.innerHTML = `
+    <span>${message}</span>
+    <button class="notification-close">×</button>
+  `;
+
+  // Добавляем уведомление в контейнер
+  notificationContainer.appendChild(notification);
+
+  // Анимация появления
+  setTimeout(() => {
+    notification.classList.add("notification-visible");
+  }, 10);
+
+  // Настраиваем закрытие уведомления
+  const closeBtn = notification.querySelector(".notification-close");
+  closeBtn.addEventListener("click", () => removeNotification(notification));
+
+  // Автоматическое удаление через указанное время
+  if (duration) {
+    setTimeout(() => removeNotification(notification), duration);
+  }
+
+  // Функция удаления уведомления
+  function removeNotification(element) {
+    element.classList.remove("notification-visible");
+    setTimeout(() => {
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+    }, 3000);
+  }
+}
+
 async function handleLogin() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -22,23 +1052,16 @@ async function handleLogin() {
 
     console.log("Отправка данных для входа:", { email, password });
 
-    const response = await fetch(
-      "https://product-movement.onrender.com/api/login",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`https error! status: ${response.status}`);
-    }
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
     const data = await response.json();
-    // Проверяем статус ответа
+
     if (response.status === 401) {
       loginError.textContent = "Неправильний логін або пароль";
       loginError.style.display = "block";
@@ -48,14 +1071,13 @@ async function handleLogin() {
     if (response.ok) {
       loginForm.style.display = "none";
       mainContent.style.display = "block";
-      populateLocations();
+      restoreUserSelection();
     } else {
       loginError.textContent = data.error || "Помилка входу";
       loginError.style.display = "block";
     }
   } catch (error) {
     console.error("Ошибка:", error);
-    // Проверяем, является ли ошибка ответом 401
     if (error.message.includes("401")) {
       loginError.textContent = "Неправильний логін або пароль";
     } else {
@@ -80,111 +1102,27 @@ function handleLogout() {
   loginForm.reset();
 
   // Показываем форму логина и скрываем основной контент
-  loginForm.style.display = "block";
+  loginForm.style.display = "flex";
   mainContent.style.display = "none";
 
   // Очищаем результаты
   document.getElementById("result").innerHTML = "";
+
   // Очищаем историю формы
   if (window.history.replaceState) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 
-// Массив локаций
-const branchIds = [
-  { name: "001_G_CAR_UA", id: 112954 },
-  { name: "002_G_CAR_PL", id: 123343 },
-  { name: "003_INSURANCE CASES", id: 178097 },
-  { name: "01_G_CAR_CENTRAL", id: 134397 },
-  { name: "021_G_CAR_LV", id: 137783 },
-  { name: "022_G_CAR_LV", id: 170450 },
-  { name: "03_G_CAR_OD", id: 171966 },
-  { name: "08_G_CAR_PLT", id: 147848 },
-  { name: "16_G_CAR_CV", id: 155210 },
-  { name: "181_G_CAR_LU", id: 158504 },
-  { name: "182_G_CAR_LU", id: 177207 },
-  { name: "191_G_CAR_RV", id: 154905 },
-  { name: "192_G_CAR_RV", id: 184657 },
-];
-// Массив складов
-const warehouses = {
-  112954: [
-    { name: "001_Київ ЦО_Маркетинг", id: "3936541" },
-    { name: "001_Київ ЦО_Склад залишків ТМЦ", id: "3939523" },
-    { name: "00_Центральний Офіс - Київ", id: "3582358" },
-    { name: "01_Автопарк Київ", id: "3941802" },
-    { name: "02_Автопарк Львів", id: "1752781" },
-  ],
-  123343: [
-    { name: "28_Автопарк Варшава", id: "2121171" },
-    { name: "29_Автопарк Краков", id: "3101146" },
-    { name: "Склад товаров", id: "2134908" },
-  ],
-  178097: [{ name: "003 - INSURANCE - Б/В Запчастини", id: "3795083" }],
-  134397: [
-    { name: "01_Автопарк Київ", id: "2975737" },
-    { name: "01_Автопарк Київ USA", id: "2864613" },
-    { name: "01_Бориспольская", id: "1758933" },
-    { name: "01_Обладнання", id: "1787666" },
-    { name: "01_СТО G CAR Київ", id: "1751786" },
-  ],
-  137783: [
-    { name: "021_Зовнішній_СТО G CAR Львів-1", id: "3345428" },
-    { name: "021_Парковий_СТО G CAR Львів-1", id: "2975730" },
-    { name: "021_Склад обладнання СТО G CAR Львів-1", id: "2629504" },
-  ],
-  170450: [
-    { name: "022_Зовнішній_СТО G CAR Львів-2", id: "3561979" },
-    { name: "022_Парковий_СТО G CAR Львів-2", id: "3547679" },
-    { name: "022_Склад обладнання СТО G CAR Львів-2", id: "3882388" },
-  ],
-  171966: [
-    { name: "03_Зовнішній_СТО G CAR Одеса", id: "3596936" },
-    { name: "03_Парковий_СТО G CAR Одеса", id: "3677901" },
-    { name: "03_Склад обладнання СТО G CAR Одеса", id: "3677908" },
-  ],
-  147848: [
-    { name: "08_Автопарк Полтава Самокати", id: "3581659" },
-    { name: "08_Зовнішній_СТО G CAR Полтава", id: "3345391" },
-    { name: "08_Парковий_СТО G CAR Полтава", id: "2919486" },
-    { name: "08_Склад обладнання СТО G CAR Полтава", id: "3671030" },
-  ],
-  155210: [
-    { name: "16_Зовнішній_СТО G CAR Чернівці", id: "3345423" },
-    { name: "16_Парковий_USA_СТО G CAR Чернівці", id: "3435299" },
-    { name: "16_Парковий_СТО G CAR Чернівці", id: "3116261" },
-    { name: "16_Склад обладнання СТО G CAR Чернівці", id: "3882429" },
-  ],
-  158504: [
-    { name: "181_Зовнішній_СТО G CAR Луцьк-1", id: "3345400" },
-    { name: "181_Парковий_СТО G CAR Луцьк-1", id: "3216547" },
-    { name: "181_СТО G CAR Луцьк-1", id: "3273055" },
-  ],
-  177207: [
-    { name: "182_Зовнішній_СТО G CAR Луцьк-2", id: "3778688" },
-    { name: "182_СТО G CAR Луцьк-2", id: "3768208" },
-  ],
-  154905: [
-    { name: "191_Зовнішній_СТО G CAR Рівне-1", id: "3345403" },
-    { name: "191_Парковий_СТО G CAR Рівне-1", id: "3109550" },
-    { name: "191_Склад обладнання СТО G CAR Рівне-1", id: "3882417" },
-  ],
-  184657: [
-    { name: "192_Зовнішній склад запчастин_СТО G CAR Рівне-2", id: "3951182" },
-    { name: "192_Склад автопарку G CAR Рівне 2", id: "3952158" },
-    { name: "192_Склад обладнання СТО G CAR Рівне-2", id: "3951189" },
-    { name: "Склад матеріалів", id: "3951093" },
-  ],
-};
-
+// Типы финансовых документов
 const documentTypes = {
-  0: "Замовлення",
-  1: "Продаж",
-  3: "Оприбуткування",
-  4: "Списання",
-  5: "Переміщення",
-  7: "Повернення постачальнику",
+  0: "Внесення коштів",
+  1: "Продаж клієнту",
+  2: "Переказ між касами",
+  3: "Оплата замовлення",
+  4: "Повернення коштів",
+  5: "Витрата",
+  6: "Оплата постачальнику",
 };
 
 function handleImageError(img) {
@@ -192,664 +1130,293 @@ function handleImageError(img) {
   img.src = "./img/GCAR_LOGO.png";
 }
 
-function populateLocations() {
-  const locationSelect = document.getElementById("locationSelect");
-  branchIds.forEach((branch) => {
-    const option = document.createElement("option");
-    option.value = branch.id;
-    option.text = branch.name;
-    locationSelect.add(option);
-  });
-}
+function createClientInfoSection(clientData) {
+  // Форматирование даты создания клиента
+  const createdDate = clientData.created_at
+    ? new Date(clientData.created_at).toLocaleDateString("ru-RU", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+    : "-";
 
-function populateWarehouses(branchId) {
-  const warehouseSelect = document.getElementById("warehouseSelect");
-  warehouseSelect.innerHTML = '<option value="">Виберіть склад</option>';
-  if (branchId && warehouses[branchId]) {
-    warehouses[branchId].forEach((warehouse) => {
-      const option = document.createElement("option");
-      option.value = warehouse.id;
-      option.text = warehouse.name;
-      warehouseSelect.add(option);
-    });
-    warehouseSelect.disabled = false;
-  } else {
-    warehouseSelect.disabled = true;
-  }
-}
-
-function handleLocationChange() {
-  const locationSelect = document.getElementById("locationSelect");
-  const loadButton = document.getElementById("loadButton");
-  const errorDiv = document.getElementById("errorMessage"); // Добавим новый элемент для сообщений об ошибках
-  const selectedBranchId = locationSelect.value;
-
-  console.log("Selected Branch ID:", selectedBranchId);
-
-  if (selectedBranchId === "") {
-    // Если локация не выбрана, разрешаем поиск по всем локациям
-    loadButton.disabled = false;
-    if (errorDiv) errorDiv.style.display = "none";
-  } else {
-    // Если локация выбрана, требуем выбор склада
-    loadButton.disabled = true;
-    if (errorDiv) errorDiv.innerHTML = "Виберіть, будь ласка, склад";
-    if (errorDiv) errorDiv.style.display = "block";
+  // Получение телефона клиента
+  let phoneNumber = "-";
+  if (clientData.phone && clientData.phone.length > 0) {
+    phoneNumber = clientData.phone[0].phone || "-";
   }
 
-  populateWarehouses(selectedBranchId);
-}
-
-function enableLoadButton() {
-  const locationSelect = document.getElementById("locationSelect");
-  const warehouseSelect = document.getElementById("warehouseSelect");
-  const loadButton = document.getElementById("loadButton");
-  const errorDiv = document.getElementById("errorMessage");
-
-  const selectedLocationId = locationSelect.value;
-  const selectedWarehouseId = warehouseSelect.value;
-
-  // Если локация выбрана и склад выбран, активируем кнопку
-  if (selectedLocationId !== "" && selectedWarehouseId !== "") {
-    loadButton.disabled = false;
-    if (errorDiv) errorDiv.style.display = "none";
-  }
-  // Если локация выбрана, но склад не выбран, деактивируем кнопку
-  else if (selectedLocationId !== "") {
-    loadButton.disabled = true;
-    if (errorDiv) errorDiv.innerHTML = "Виберіть, будь ласка, склад";
-    if (errorDiv) errorDiv.style.display = "block";
-  }
-
-  console.log("Selected Warehouse ID:", selectedWarehouseId);
-}
-/*
-async function loadData() {
-  const idInput = document.getElementById("idInput").value;
-  const locationSelect = document.getElementById("locationSelect");
-  const warehouseSelect = document.getElementById("warehouseSelect");
-  const selectedLocationId = locationSelect.value;
-  const selectedWarehouseId = warehouseSelect.value;
-
-  try {
-    const preloader = document.getElementById("preloader");
-    preloader.style.display = "flex";
-
-    let allData = [];
-    let currentPage = 1;
-    let hasMoreData = true;
-
-    // Получаем данные о товаре и сотрудниках
-    const [initialEntityResponse, initialEmployeeResponse] = await Promise.all([
-      fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: idInput }),
-      }),
-      fetch(
-        "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        }
-      ),
-    ]);
-
-    entityData = await initialEntityResponse.json();
-    employeesData = await initialEmployeeResponse.json();
-
-    let totalRecords = 0; // Добавляем счетчик
-    console.log("Начинаем сбор данных...");
-
-    // Собираем данные по страницам
-    while (hasMoreData) {
-      const flowResponse = await fetch(
-        "https://product-movement.onrender.com/api/proxy/goods-flow-items",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sort: {},
-            page: currentPage,
-            take: 50,
-            pageSize: 50,
-            skip: (currentPage - 1) * 50,
-            startDate: 0,
-            endDate: 253402300799999,
-            tz: "Europe/Kiev",
-            id: idInput,
-          }),
-        }
-      );
-
-      const flowData = await flowResponse.json();
-      console.log(
-        `Страница ${currentPage}, получено записей:`,
-        flowData.data?.length
-      );
-      console.log("Всего записей в системе:", flowData.count);
-
-      if (flowData.data && flowData.data.length > 0) {
-        allData = [...allData, ...flowData.data];
-        currentPage++;
-      } else {
-        hasMoreData = false; // Прекращаем цикл если нет данных
-      }
-      console.log("Всего собрано записей:", allData.length);
-    }
-
-    if (selectedLocationId && selectedWarehouseId) {
-      // Фильтруем данные только если выбран конкретный склад
-      allData = allData.filter((item) => {
-        const relationType = parseInt(item.relation_type, 10);
-
-        if (relationType === 5) {
-          // Если это перемещение
-          if (item.outcome) {
-            // Если это расход, сравниваем с warehouse_id
-            return String(item.warehouse_id) === String(selectedWarehouseId);
-          } else if (item.income) {
-            // Если это приход, сравниваем с optional_warehouse_id
-            return (
-              String(item.optional_warehouse_id) === String(selectedWarehouseId)
-            );
-          }
-        } else {
-          // Для всех остальных типов операций сравниваем с warehouse_id
-          return String(item.warehouse_id) === String(selectedWarehouseId);
-        }
-        return false; // Если ни одно условие не подошло
-      });
-    }
-
-    // Проверяем, есть ли данные после фильтрации
-    if (allData.length === 0) {
-      document.getElementById(
-        "result"
-      ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
-      return;
-    }
-
-    // Создаем таблицу
-    let tableHTML = `
-      <div class="entity-info">
-        <div class="product-header">
-          <div class="product-image">
-            ${
-              entityData.image
-                ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
-                : `<img src="./img/GCAR_LOGO.png">`
-            }
+  // Создаем HTML для секции с информацией о клиенте
+  const clientInfoHTML = `
+    <div class="client-info-section">
+      <div class="client-header">
+        <h2>Інформація про клієнта</h2>
+      </div>
+      <div class="client-details">
+        <div class="client-row">
+          <div class="client-field">
+            <span class="field-label">ID клієнта:</span>
+            <span class="field-value">${clientData.id || "-"}</span>
           </div>
-          <div class="product-details">
-            <h3>Товар:</h3>
-            <p>ID: ${entityData.id || "-"}</p>
-            <p>Название: ${entityData.title || "-"}</p>
-            <p>Количество записей: ${allData.length}</p>
+          <div class="client-field">
+            <span class="field-label">Ім'я/Назва:</span>
+            <span class="field-value">${clientData.name || "-"}</span>
+          </div>
+          <div class="client-field">
+            <span class="field-label">Телефон:</span>
+            <span class="field-value">${phoneNumber}</span>
+          </div>
+        </div>
+        <div class="client-row">
+          <div class="client-field">
+            <span class="field-label">E-mail:</span>
+            <span class="field-value">${clientData.email || "-"}</span>
+          </div>
+          <div class="client-field">
+            <span class="field-label">Адреса:</span>
+            <span class="field-value">${clientData.address || "-"}</span>
+          </div>
+          <div class="client-field">
+            <span class="field-label">Дата реєстрації клієнта:</span>
+            <span class="field-value">${createdDate}</span>
+          </div>
+        </div>
+        <div class="client-row">
+          <div class="client-field">
+            <span class="field-label">Загальний баланс за період співпраці:</span>
+            <span class="field-value amount ${
+              clientData.balance >= 0 ? "positive" : "negative"
+            }">
+              ${clientData.balance ? clientData.balance.toFixed(2) : "0.00"} грн
+            </span>
+          </div>
+          <div class="client-field">
+            <span class="field-label">Замітки:</span>
+            <span class="field-value notes">${clientData.notes || "-"}</span>
           </div>
         </div>
       </div>
-      <table>
+    </div>
+  `;
+  return clientInfoHTML;
+}
+
+// Функция для создания таблицы
+function createFinanceTableHTML(
+  financeData,
+  clientData,
+  employeesData,
+  periodText = ""
+) {
+  tableData = [];
+
+  // Используем только данные из запроса client-transfers
+  const transfersData = financeData.filter(
+    (item) => item.dataSource === "transfers"
+  );
+
+  // Если нет данных о переводах, выводим сообщение
+  if (transfersData.length === 0) {
+    let tableHTML = createClientInfoSection(clientData);
+    tableHTML += `
+  <div class="finance-table-section">
+    <div class="table-header">
+      <h3>Фінансові операції клієнта${periodText}</h3>
+      <div class="operation-count">
+        Показано: ${transfersData.length} записей
+      </div>
+    </div>
+    <div class="table-scroll-container">
+      <table class="finance-table" id="financeTable">
         <thead>
           <tr>
             <th>Дата</th>
             <th>Номер документа</th>
             <th>Тип документа</th>
-            <th>Кто создал</th>
-            <th>Склад (ID)</th>
-            <th>Контрагент (ID)</th>
-            <th>Приход</th>
-            <th>Расход</th>
-            <th>Остаток</th>
+            <th>Хто створив</th>
+            <th>Рух коштів</th>
+            <th>Документ підстава для грошей</th>
+            <th>Баланс за обранний період</th>
           </tr>
         </thead>
         <tbody>
-    `;
-
-    let balance = 0;
-    allData.forEach((item) => {
-      const income = item.income !== undefined ? parseFloat(item.income) : 0;
-      const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-      item.balance = balance - outcome + income; // Сохраняем остаток в объекте
-      balance = item.balance;
-      const relationType = parseInt(item.relation_type, 10);
-      const documentType = documentTypes[relationType] || "-";
-      const employeeName =
-        employeesData.data.find((emp) => emp.id === item.employee_id)
-          ?.counterparty?.fullname ||
-        employeesData.data.find((emp) => emp.id === item.employee_id)?.name ||
-        employeesData.data.find((emp) => emp.id === item.employee_id)?.login ||
-        item.employee_id ||
-        "-";
-      const dateStr = item.created_at
-        ? new Date(item.created_at).toLocaleString("ru-RU", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "-";
-      // Определяем склад и контрагента в зависимости от типа операции
-      let warehouseInfo, clientInfo;
-
-      if (relationType === 5) {
-        // Если это перемещение
-        if (outcome) {
-          // Если это расход (перемещение из склада)
-          warehouseInfo = `${item.warehouse_title || "-"} (${
-            item.warehouse_id || "-"
-          })`;
-          clientInfo = `${item.optional_warehouse_title || "-"} (${
-            item.optional_warehouse_id || "-"
-          })`;
-        } else if (income) {
-          // Если это приход (перемещение на склад)
-          warehouseInfo = `${item.optional_warehouse_title || "-"} (${
-            item.optional_warehouse_id || "-"
-          })`;
-          clientInfo = `${item.warehouse_title || "-"} (${
-            item.warehouse_id || "-"
-          })`;
-        }
-      } else {
-        // Для остальных типов операций оставляем как было
-        warehouseInfo = `${item.warehouse_title || "-"} (${
-          item.warehouse_id || "-"
-        })`;
-        clientInfo = `${item.client_name || "-"} (${item.client_id || "-"})`;
-      }
-
-      // Вычисляем остаток только если операция относится к выбранному складу
-      let currentBalance = 0;
-      const warehouseIdFromInfo = warehouseInfo.match(/\((\d+)\)/)?.[1];
-      if (warehouseIdFromInfo === selectedWarehouseId) {
-        balance = balance - outcome + income;
-        currentBalance = balance;
-      }
-
-      // balance = balance - outcome + income;
-
-      console.log("Обработка записи:", dateStr);
-
-      tableHTML += `
-        <tr>
-          <td>${dateStr}</td>
-          <td>${item.relation_id_label || "-"}</td>
-          <td>${documentType}</td>
-          <td>${employeeName}</td>
-          <td>${warehouseInfo}</td>
-          <td>${clientInfo}</td>
-          <td>${item.income !== undefined ? item.income : "-"}</td>
-          <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
-          <td>${currentBalance || "-"}</td>
-        </tr>
-      `;
-    });
-
-    tableHTML += `</tbody></table>`;
-    document.getElementById("result").innerHTML = tableHTML;
-  } catch (error) {
-    console.error("Ошибка:", error);
-    document.getElementById(
-      "result"
-    ).innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
-  } finally {
-    preloader.style.display = "none";
-  }
-}  */
-async function loadData() {
-  const idInput = document.getElementById("idInput").value;
-  const locationSelect = document.getElementById("locationSelect");
-  const warehouseSelect = document.getElementById("warehouseSelect");
-  const selectedLocationId = locationSelect.value;
-  const selectedWarehouseId = warehouseSelect.value;
-
-  try {
-    const preloader = document.getElementById("preloader");
-    preloader.style.display = "flex";
-
-    // Получаем данные о товаре и сотрудниках
-    const [entityData, employeesData] = await getInitialData(idInput);
-
-    // Собираем все данные о движении товара
-    const allData = await collectAllData(idInput);
-
-    // Фильтруем данные по выбранному складу если нужно
-    const filteredData = filterDataByWarehouse(
-      allData,
-      selectedLocationId,
-      selectedWarehouseId
-    );
-
-    if (filteredData.length === 0) {
-      showNoDataMessage();
-      return;
-    }
-
-    // Создаем и отображаем таблицу
-    document.getElementById("result").innerHTML = createTableHTML(
-      filteredData,
-      entityData,
-      employeesData,
-      selectedWarehouseId
-    );
-  } catch (error) {
-    console.error("Ошибка:", error);
-    showErrorMessage(error);
-  } finally {
-    preloader.style.display = "none";
-  }
-}
-
-async function getInitialData(idInput) {
-  const [entityResponse, employeesResponse] = await Promise.all([
-    fetch("https://product-movement.onrender.com/api/proxy/get-entity", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: idInput }),
-    }),
-    fetch(
-      "https://product-movement.onrender.com/api/proxy/get-employees-and-invites",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      }
-    ),
-  ]);
-
-  const entityData = await entityResponse.json();
-  const employeesData = await employeesResponse.json();
-  return [entityData, employeesData];
-}
-
-async function collectAllData(idInput) {
-  let allData = [];
-  let currentPage = 1;
-  let hasMoreData = true;
-
-  console.log("Начинаем сбор данных...");
-
-  while (hasMoreData) {
-    const flowData = await fetchPageData(currentPage, idInput);
-
-    if (flowData.data?.length > 0) {
-      allData = [...allData, ...flowData.data];
-      currentPage++;
-    } else {
-      hasMoreData = false;
-    }
-
-    console.log("Всего собрано записей:", allData.length);
+`;
+    return tableHTML;
   }
 
-  return allData;
-}
-
-async function fetchPageData(page, idInput) {
-  const response = await fetch(
-    "https://product-movement.onrender.com/api/proxy/goods-flow-items",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sort: {},
-        page,
-        take: 50,
-        pageSize: 50,
-        skip: (page - 1) * 50,
-        startDate: 0,
-        endDate: 253402300799999,
-        tz: "Europe/Kiev",
-        id: idInput,
-      }),
-    }
+  // Сортируем данные по дате (сначала новые, потом старые)
+  let sortedData = [...transfersData].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
   );
 
-  const data = await response.json();
-  console.log(`Страница ${page}, получено записей:`, data.data?.length);
-  return data;
-}
+  // Копия отсортированных данных для расчета баланса
+  // Для расчета баланса нужно идти от старых к новым (хронологически)
+  let balanceCalcData = [...sortedData].reverse();
 
-function filterDataByWarehouse(data, locationId, warehouseId) {
-  if (!locationId || !warehouseId) return data;
-
-  return data.filter((item) => {
-    const relationType = parseInt(item.relation_type, 10);
-
-    if (relationType === 5) {
-      if (item.outcome) {
-        return String(item.warehouse_id) === String(warehouseId);
-      } else if (item.income) {
-        return String(item.optional_warehouse_id) === String(warehouseId);
-      }
-    } else {
-      return String(item.warehouse_id) === String(warehouseId);
-    }
-    return false;
-  });
-}
-
-function showNoDataMessage() {
-  document.getElementById(
-    "result"
-  ).innerHTML = `<p style="color: red;">Информация по этому складу для данного товара отсутствует</p>`;
-}
-
-function showErrorMessage(error) {
-  document.getElementById(
-    "result"
-  ).innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
-}
-// Функция создания таблицы
-
-function createTableHTML(
-  allData,
-  entityData,
-  employeesData,
-  selectedWarehouseId
-) {
-  tableData = [];
-  // Сортируем и считаем остатки
-  let sortedData = [...allData].sort(
-    (a, b) => new Date(a.created_at) - new Date(b.created_at)
-  );
+  // Считаем баланс начиная со старых записей
   let balance = 0;
+  balanceCalcData.forEach((item) => {
+    // Определяем приход и расход
+    const outcome = getOutcome(item); // Это будет отображаться в столбце "Рух коштів"
+    const income = getIncome(item); // Это будет отображаться в столбце "Документ підстава для грошей"
 
-  // Считаем остатки
-
-  sortedData.forEach((item) => {
-    const income = item.income !== undefined ? parseFloat(item.income) : 0;
-    const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-    if (shouldCountBalance(item, selectedWarehouseId)) {
-      balance += income - outcome;
-      item.calculatedBalance = balance;
-    }
+    // Обновляем баланс как разницу между "Документ підстава для грошей" и "Рух коштів"
+    balance += income - outcome;
+    item.calculatedBalance = balance;
   });
 
-  // Сортируем для отображения
-  sortedData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  // Создаем HTML для отображения информации о клиенте
+  let tableHTML = createClientInfoSection(clientData);
 
-  // Создаем шапку таблицы
-
-  let tableHTML = `
-    <div class="entity-info">
-      <div class="product-header">
-        <div class="product-image">
-          ${
-            entityData.image
-              ? `<img src="${entityData.image}" alt="Изображение товара" onerror="handleImageError(this)">`
-              : `<img src="./img/GCAR_LOGO.png">`
-          }
-        </div>
-        <div class="product-details">
-          <h3>Товар:</h3>
-          <p>ID: ${entityData.id || "-"}</p>
-          <p>Название: ${entityData.title || "-"}</p>
-          <p>Количество записей: ${allData.length}</p>
+  // Добавляем заголовок таблицы финансовых операций с информацией о периоде
+  tableHTML += `
+    <div class="finance-table-section">
+      <div class="table-header">
+        <h3>Фінансові операції клієнта${periodText}</h3>
+        <div class="operation-count">
+          Показано: ${transfersData.length} записей
         </div>
       </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Дата</th>
-          <th>Номер документа</th>
-          <th>Тип документа</th>
-          <th>Кто создал</th>
-          <th>Склад (ID)</th>
-          <th>Контрагент (ID)</th>
-          <th>Приход</th>
-          <th>Расход</th>
-          <th>Остаток</th>
-        </tr>
-      </thead>
-      <tbody>
+      <div class="table-scroll-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Номер документа</th>
+              <th>Тип документа</th>
+              <th>Хто створив</th>
+              <th>Рух коштів</th>
+              <th>Документ підстава для грошей</th>
+              <th>Баланс за обранний період</th>
+            </tr>
+          </thead>
+          <tbody>
   `;
-  // Создаем строки и собираем данные для экспорта
+
+  // Создаем строки таблицы (используем sortedData - уже отсортированы от новых к старым)
   sortedData.forEach((item) => {
     const dateStr = formatDate(item.created_at);
-    const employeeName = getEmployeeName(item.employee_id, employeesData);
-    const documentType = documentTypes[parseInt(item.relation_type, 10)] || "-";
-    const income = item.income !== undefined ? parseFloat(item.income) : 0;
-    const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-    const { warehouseInfo, clientInfo } = getWarehouseAndClientInfo(
-      item,
-      parseInt(item.relation_type, 10),
-      income,
-      outcome
-    );
+    const documentId = getDocumentId(item);
+    const documentType = getDocumentType(item);
+    const employeeName = getEmployeeName(item, employeesData);
+
+    // Получаем данные для колонок
+    const movementAmount = getOutcome(item); // Для столбца "Рух коштів"
+    const documentAmount = getIncome(item); // Для столбца "Документ підстава для грошей"
+
+    // Преобразуем значения для отображения
+    const movementDisplay =
+      movementAmount > 0 ? movementAmount.toFixed(2) : "-";
+    const documentDisplay =
+      documentAmount > 0 ? documentAmount.toFixed(2) : "-";
+    const balanceDisplay = item.calculatedBalance.toFixed(2);
 
     // Данные для экспорта
     tableData.push([
       dateStr,
-      item.relation_id_label || "-",
+      documentId,
       documentType,
       employeeName,
-      warehouseInfo,
-      clientInfo,
-      item.income !== undefined ? item.income : "-",
-      item.outcome !== undefined ? item.outcome : "-",
-      item.calculatedBalance || "-",
+      movementDisplay,
+      documentDisplay,
+      balanceDisplay,
     ]);
 
-    // HTML строки
+    // HTML строки с правильным порядком данных в столбцах
     tableHTML += `
       <tr>
         <td>${dateStr}</td>
-        <td>${item.relation_id_label || "-"}</td>
+        <td>${documentId}</td>
         <td>${documentType}</td>
         <td>${employeeName}</td>
-        <td>${warehouseInfo}</td>
-        <td>${clientInfo}</td>
-        <td>${item.income !== undefined ? item.income : "-"}</td>
-        <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
-        <td>${item.calculatedBalance || "-"}</td>
+        <td class="amount income">${movementDisplay}</td>
+        <td class="amount outcome">${documentDisplay}</td>
+        <td class="amount balance ${
+          item.calculatedBalance >= 0 ? "positive" : "negative"
+        }">${balanceDisplay}</td>
       </tr>
     `;
   });
 
-  tableHTML += `</tbody></table>`;
+  tableHTML += `</tbody></table>
+  </div>
+  </div>`;
   return tableHTML;
 }
 
-function shouldCountBalance(item, selectedWarehouseId) {
-  const relationType = parseInt(item.relation_type, 10);
+// Получение типа документа
+function getDocumentType(item) {
+  // Для данных из второго API (переводы)
+  if (item.dataSource === "transfers") {
+    const documentType = item.document_type;
 
-  if (relationType === 5) {
-    if (item.outcome) {
-      return String(item.warehouse_id) === String(selectedWarehouseId);
-    } else if (item.income) {
-      return String(item.optional_warehouse_id) === String(selectedWarehouseId);
+    // Обрабатываем коды типов документов согласно условиям
+    switch (documentType) {
+      case 0:
+        return "заказ-наряд";
+      case 1:
+        return "продаж товару";
+      case 3:
+        return "оприбуткування";
+      case 10:
+        return "касова операція";
+      case 90:
+        return "коригування балaнсу";
+      case 7:
+        return "повернення постачальнику";
+      case 2:
+        return "відшкодування клієнту";
+      default:
+        return `Тип ${documentType || "неизвестный"}`;
     }
   }
-  return String(item.warehouse_id) === String(selectedWarehouseId);
+
+  // По умолчанию
+  return "-";
 }
 
-function createTableRow(item, employeesData, selectedWarehouseId) {
-  const income = item.income !== undefined ? parseFloat(item.income) : 0;
-  const outcome = item.outcome !== undefined ? parseFloat(item.outcome) : 0;
-  const relationType = parseInt(item.relation_type, 10);
-  const { warehouseInfo, clientInfo } = getWarehouseAndClientInfo(
-    item,
-    relationType,
-    income,
-    outcome
-  );
-
-  const dateStr = formatDate(item.created_at);
-  const employeeName = getEmployeeName(item.employee_id, employeesData);
-  const documentType = documentTypes[relationType] || "-";
-
-  // Формируем данные для экспорта
-  const exportData = [
-    dateStr,
-    item.relation_id_label || "-",
-    documentType,
-    employeeName,
-    warehouseInfo,
-    clientInfo,
-    item.income !== undefined ? item.income : "-",
-    item.outcome !== undefined ? item.outcome : "-",
-    item.calculatedBalance || "-",
-  ];
-
-  const rowHtml = `
-    <tr>
-      <td>${dateStr}</td>
-      <td>${item.relation_id_label || "-"}</td>
-      <td>${documentType}</td>
-      <td>${employeeName}</td>
-      <td>${warehouseInfo}</td>
-      <td>${clientInfo}</td>
-      <td>${item.income !== undefined ? item.income : "-"}</td>
-      <td>${item.outcome !== undefined ? item.outcome : "-"}</td>
-      <td>${item.calculatedBalance || "-"}</td>
-    </tr>
-  `;
-  return { rowHtml, exportData };
-}
-
-function getWarehouseAndClientInfo(item, relationType, income, outcome) {
-  let warehouseInfo, clientInfo;
-
-  if (relationType === 5) {
-    if (outcome) {
-      warehouseInfo = `${item.warehouse_title || "-"} (${
-        item.warehouse_id || "-"
-      })`;
-      clientInfo = `${item.optional_warehouse_title || "-"} (${
-        item.optional_warehouse_id || "-"
-      })`;
-    } else if (income) {
-      warehouseInfo = `${item.optional_warehouse_title || "-"} (${
-        item.optional_warehouse_id || "-"
-      })`;
-      clientInfo = `${item.warehouse_title || "-"} (${
-        item.warehouse_id || "-"
-      })`;
-    }
-  } else {
-    warehouseInfo = `${item.warehouse_title || "-"} (${
-      item.warehouse_id || "-"
-    })`;
-    clientInfo = `${item.client_name || "-"} (${item.client_id || "-"})`;
+// Получение ID документа
+function getDocumentId(item) {
+  // Для данных из второго API (переводы)
+  if (item.dataSource === "transfers") {
+    return item.document_label || "-";
   }
 
-  return { warehouseInfo, clientInfo };
+  return "-";
 }
 
-function getEmployeeName(employeeId, employeesData) {
-  return (
-    employeesData.data.find((emp) => emp.id === employeeId)?.counterparty
-      ?.fullname ||
-    employeesData.data.find((emp) => emp.id === employeeId)?.name ||
-    employeesData.data.find((emp) => emp.id === employeeId)?.login ||
-    employeeId ||
-    "-"
-  );
+// Функция для получения имени сотрудника
+function getEmployeeName(item, employeesData) {
+  // Для данных из второго API (переводы)
+  if (item.dataSource === "transfers") {
+    return item.employee?.fullname || "-";
+  }
+
+  return "-";
+}
+
+// Получение суммы прихода (для колонки "Документ підстава для грошей")
+function getIncome(item) {
+  // Для данных из второго API (переводы)
+  if (item.dataSource === "transfers") {
+    // Если сумма положительная, это приход
+    const amount = parseFloat(item.amount);
+    return amount > 0 ? amount : 0;
+  }
+
+  return 0;
+}
+
+// Получение суммы расхода (для колонки "Рух коштів")
+function getOutcome(item) {
+  // Для данных из второго API (переводы)
+  if (item.dataSource === "transfers") {
+    // Если сумма отрицательная, это расход (преобразуем в положительное число)
+    const amount = parseFloat(item.amount);
+    return amount < 0 ? Math.abs(amount) : 0;
+  }
+
+  return 0;
 }
 
 function formatDate(date) {
@@ -863,15 +1430,6 @@ function formatDate(date) {
       })
     : "-";
 }
-// Обновляем обработчик события для поля ввода
-function handleKeyDown(event) {
-  if (event.key === "Enter") {
-    loadData();
-  }
-}
-
-// Обновляем обработчик кнопки загрузки
-document.getElementById("loadButton").onclick = loadData;
 
 function exportToExcel() {
   // Добавляем BOM для правильной кодировки UTF-8
@@ -882,13 +1440,11 @@ function exportToExcel() {
     [
       "Дата",
       "Номер документа",
-      "Тип документу",
+      "Тип документа",
       "Хто створив",
-      "Склад (ID)",
-      "Контрагент (ID)",
-      "Надходження",
-      "Витрата",
-      "Залишок",
+      "Рух коштів",
+      "Документ підстава для грошей",
+      "Баланс за обранний період",
     ],
     ...tableData,
   ]);
@@ -899,84 +1455,92 @@ function exportToExcel() {
     { wch: 15 }, // Номер документа
     { wch: 20 }, // Тип документа
     { wch: 25 }, // Кто создал
-    { wch: 30 }, // Склад
-    { wch: 30 }, // Контрагент
-    { wch: 15 }, // Приход
-    { wch: 15 }, // Расход
-    { wch: 15 }, // Остаток
+    { wch: 15 }, // Рух коштів
+    { wch: 15 }, // Документ підстава для грошей
+    { wch: 15 }, // Баланс за обранний період
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data");
+  XLSX.utils.book_append_sheet(wb, ws, "Финансы");
 
   // Добавляем параметр bookType для xlsx формата
-  XLSX.writeFile(wb, "data.xlsx", { bookType: "xlsx", type: "binary" });
+  XLSX.writeFile(wb, "finance.xlsx", { bookType: "xlsx", type: "binary" });
 }
 
 function exportToPDF() {
   const { jsPDF } = window.jspdf;
 
-  // Создаем PDF с поддержкой кириллицы
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "pt",
-    format: "a4",
-    putOnlyUsedFonts: true,
-    floatPrecision: 16,
-  });
+  // Загружаем шрифт для поддержки кириллицы
+  const loadFontAndExport = async () => {
+    try {
+      // Создаем PDF с альбомной ориентацией
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "pt",
+        format: "a4",
+        putOnlyUsedFonts: true,
+        floatPrecision: 16,
+      });
 
-  doc.autoTable({
-    head: [
-      [
-        "Дата",
-        "Номер документа",
-        "Тип документу",
-        "Хто створив",
-        "Склад (ID)",
-        "Контрагент (ID)",
-        "Надходження",
-        "Витрата",
-        "Залишок",
-      ],
-    ],
-    body: tableData,
-    startY: 20,
-    theme: "grid",
-    styles: {
-      font: "helvetica", // используем шрифт с поддержкой кириллицы
-      fontSize: 8,
-      cellPadding: 4,
-      overflow: "linebreak",
-      halign: "left", // выравнивание по левому краю
-    },
-    columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 80 },
-      2: { cellWidth: 80 },
-      3: { cellWidth: 80 },
-      4: { cellWidth: 80 },
-      5: { cellWidth: 80 },
-      6: { cellWidth: 40 },
-      7: { cellWidth: 40 },
-      8: { cellWidth: 40 },
-    },
-    // Добавляем поддержку кириллицы
-    didDrawCell: function (data) {
-      if (data.section === "body" || data.section === "head") {
-        const td = data.cell.raw;
-        if (td) {
-          doc.setFontSize(8);
-        }
-      }
-    },
-  });
+      // Импортируем шрифт Roboto для поддержки кириллицы (или другой подходящий)
+      doc.addFont(
+        "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf",
+        "Roboto",
+        "normal"
+      );
+      doc.setFont("Roboto");
 
-  doc.save("data.pdf");
+      // Создаем конфигурацию для autoTable с поддержкой кириллицы
+      doc.autoTable({
+        head: [
+          [
+            "Дата",
+            "Номер документа",
+            "Тип документа",
+            "Хто створив",
+            "Рух коштів",
+            "Документ підстава для грошей",
+            "Баланс за обранний період",
+          ],
+        ],
+        body: tableData,
+        startY: 20,
+        theme: "grid",
+        styles: {
+          font: "Roboto",
+          fontStyle: "normal",
+          fontSize: 9,
+          cellPadding: 4,
+          overflow: "linebreak",
+          halign: "left",
+        },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 70 },
+          3: { cellWidth: 70 },
+          4: { cellWidth: 40 },
+          5: { cellWidth: 40 },
+          6: { cellWidth: 40 },
+        },
+        // Функция для дополнительной обработки ячеек
+        didDrawCell: function (data) {
+          // Дополнительные настройки при отрисовке ячеек, если потребуется
+        },
+      });
+
+      doc.save("finance.pdf");
+    } catch (error) {
+      console.error("Ошибка при экспорте в PDF:", error);
+      showNotification(
+        "error",
+        "Помилка експорту в PDF. Спробуйте експорт в Excel."
+      );
+    }
+  };
+
+  loadFontAndExport();
 }
-
-// Инициализация выпадающих списков
-populateLocations();
-
 function handleLoginSubmit(event) {
   // Предотвращаем стандартное поведение формы
   event.preventDefault();
@@ -996,3 +1560,370 @@ function togglePassword() {
     eyeIcon.classList.remove("hide");
   }
 }
+
+// Функция для настройки поиска клиентов
+function setupClientSearch() {
+  // Находим элемент input для ID клиента
+  const idInput = document.getElementById("idInput");
+  if (!idInput) {
+    console.error("Элемент idInput не найден");
+    return;
+  }
+
+  // Проверяем, не был ли уже создан контейнер поиска
+  let searchContainer = idInput.parentElement.querySelector(
+    ".client-search-container"
+  );
+  if (searchContainer) {
+    console.log("Контейнер поиска клиентов уже существует");
+    return;
+  }
+
+  console.log("Создаем контейнер поиска клиентов");
+
+  // Создаем контейнер для поиска клиентов
+  searchContainer = document.createElement("div");
+  searchContainer.className = "client-search-container";
+
+  // Создаем поле ввода для поиска
+  const searchInput = document.createElement("input");
+  searchInput.type = "text";
+  searchInput.id = "clientSearchInput";
+  searchInput.placeholder = "Пошук клієнта по імені...";
+  searchInput.className = "client-search-input";
+
+  // Создаем кнопку поиска
+  const searchButton = document.createElement("button");
+  searchButton.type = "button";
+  searchButton.id = "clientSearchButton";
+  searchButton.textContent = "Пошук";
+  searchButton.className = "client-search-button";
+
+  // Создаем контейнер для результатов поиска
+  const resultsContainer = document.createElement("div");
+  resultsContainer.id = "clientSearchResults";
+  resultsContainer.className = "client-search-results";
+  resultsContainer.style.display = "none";
+
+  // Добавляем все элементы в контейнер поиска
+  searchContainer.appendChild(searchInput);
+  searchContainer.appendChild(searchButton);
+  searchContainer.appendChild(resultsContainer);
+
+  // Находим родительский элемент для поля ввода ID
+  const parentElement = idInput.parentElement;
+  // Добавляем контейнер поиска после поля ввода ID
+  parentElement.appendChild(searchContainer);
+
+  // Переменная для хранения таймера debounce
+  let searchTimeout = null;
+
+  // Функция debounce для поиска при вводе
+  const debouncedSearch = function () {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const query = searchInput.value.trim();
+      if (query.length >= 2) {
+        searchClients();
+      }
+    }, 500); // Задержка в 500 мс перед выполнением поиска
+  };
+
+  // Добавляем обработчики событий
+  searchButton.addEventListener("click", searchClients);
+  searchInput.addEventListener("input", debouncedSearch);
+  searchInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      clearTimeout(searchTimeout); // Отменяем задержку при нажатии Enter
+      searchClients();
+    }
+  });
+
+  // Закрываем результаты поиска при клике вне их
+  document.addEventListener("click", function (event) {
+    if (!searchContainer.contains(event.target)) {
+      resultsContainer.style.display = "none";
+    }
+  });
+
+  console.log("Контейнер поиска клиентов создан успешно");
+}
+
+// Функция для поиска клиентов
+async function searchClients() {
+  const searchInput = document.getElementById("clientSearchInput");
+  const resultsContainer = document.getElementById("clientSearchResults");
+  const query = searchInput.value.trim();
+
+  if (query.length < 2) {
+    showNotification("warning", "Введіть мінімум 2 символи для пошуку");
+    return;
+  }
+
+  try {
+    showNotification("info", "Пошук клієнтів...");
+    resultsContainer.innerHTML = '<div class="loading-spinner"></div>';
+    resultsContainer.style.display = "block";
+
+    // Использование улучшенного поиска по всем страницам
+    await searchAllClientPages(query, resultsContainer);
+  } catch (error) {
+    console.error("Ошибка при поиске клиентов:", error);
+    resultsContainer.innerHTML = `<p class="error-message">Помилка пошуку: ${error.message}</p>`;
+    showNotification("error", `Помилка пошуку: ${error.message}`);
+  }
+}
+
+// Функция для поиска по всем страницам до обнаружения совпадения
+async function searchAllClientPages(query, resultsContainer) {
+  let allClients = [];
+  let currentPage = 1;
+  let foundMatch = false;
+  let maxPages = 200; // Максимальное количество страниц для поиска
+  let exactMatches = []; // Для хранения точных совпадений
+  let partialMatches = []; // Для хранения частичных совпадений
+
+  // Преобразуем запрос в нижний регистр для поиска без учета регистра
+  const lowercaseQuery = query.toLowerCase();
+
+  // Добавляем индикатор процесса поиска
+  resultsContainer.innerHTML =
+    '<div class="search-progress">Пошук на сторінці 1...</div>';
+
+  while (!foundMatch && currentPage <= maxPages) {
+    try {
+      // Обновляем индикатор прогресса
+      const progressDiv = resultsContainer.querySelector(".search-progress");
+      if (progressDiv) {
+        progressDiv.textContent = `Пошук на сторінці ${currentPage}...`;
+      }
+
+      const response = await fetch("/api/proxy/get-clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: "", // Отправляем пустой запрос, чтобы получить всю страницу
+          page: currentPage,
+          take: 100, // Увеличиваем размер страницы
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка запроса: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.data || data.data.length === 0) {
+        break; // Если страница пуста, прекращаем поиск
+      }
+
+      // Фильтруем клиентов в соответствии с запросом
+      const pageClients = data.data;
+
+      // Проверяем каждого клиента на соответствие запросу
+      pageClients.forEach((client) => {
+        const clientName = client.name ? client.name.toLowerCase() : "";
+        const clientId = client.id ? client.id.toString() : "";
+        const clientPhone =
+          client.phone && client.phone.length > 0
+            ? client.phone[0].phone.toLowerCase()
+            : "";
+
+        // Проверяем полное соответствие имени
+        if (clientName === lowercaseQuery || clientId === query) {
+          exactMatches.push(client);
+          foundMatch = true;
+        }
+        // Проверяем частичное соответствие имени, ID или телефону
+        else if (
+          clientName.includes(lowercaseQuery) ||
+          clientId.includes(query) ||
+          clientPhone.includes(lowercaseQuery)
+        ) {
+          partialMatches.push(client);
+        }
+      });
+
+      // Если у нас уже достаточно совпадений, останавливаем поиск
+      if (exactMatches.length > 0 || partialMatches.length >= 50) {
+        foundMatch = true;
+      } else {
+        currentPage++;
+      }
+    } catch (error) {
+      console.error(`Ошибка при загрузке страницы ${currentPage}:`, error);
+      throw error;
+    }
+  }
+
+  // Объединяем результаты, сначала точные совпадения, затем частичные
+  allClients = [...exactMatches, ...partialMatches];
+
+  // Сортируем результаты по релевантности
+  allClients.sort((a, b) => {
+    const nameA = a.name ? a.name.toLowerCase() : "";
+    const nameB = b.name ? b.name.toLowerCase() : "";
+
+    // Сначала проверяем начинается ли имя с запроса
+    const startsWithA = nameA.startsWith(lowercaseQuery);
+    const startsWithB = nameB.startsWith(lowercaseQuery);
+
+    if (startsWithA && !startsWithB) return -1;
+    if (!startsWithA && startsWithB) return 1;
+
+    // Затем проверяем содержится ли запрос в имени
+    const containsA = nameA.includes(lowercaseQuery);
+    const containsB = nameB.includes(lowercaseQuery);
+
+    if (containsA && !containsB) return -1;
+    if (!containsA && containsB) return 1;
+
+    // В конце сортируем по алфавиту
+    return nameA.localeCompare(nameB);
+  });
+
+  // Ограничиваем количество результатов
+  const limitedResults = allClients.slice(0, 100);
+
+  // Отображаем результаты
+  if (limitedResults.length > 0) {
+    displaySearchResults(limitedResults);
+    if (allClients.length > 100) {
+      showNotification(
+        "info",
+        `Знайдено ${allClients.length} клієнтів. Показані перші 100. Уточніть пошуковий запит для більш точних результатів.`
+      );
+    }
+  } else {
+    resultsContainer.innerHTML =
+      '<p class="no-results">Клієнтів не знайдено</p>';
+  }
+}
+
+// Функция для инициализации фиксированной шапки таблицы
+function initStickyTableHeader() {
+  // Проверяем, есть ли таблица на странице
+  const financeTable = document.querySelector(".finance-table");
+  if (!financeTable) return;
+
+  console.log("Инициализация фиксированной шапки таблицы");
+
+  // Проверяем, применены ли уже стили position: sticky
+  const tableHeader = financeTable.querySelector("thead");
+  if (!tableHeader) return;
+
+  // Принудительно применяем стили
+  tableHeader.style.position = "sticky";
+  tableHeader.style.top = "0";
+  tableHeader.style.zIndex = "1000";
+
+  const headerCells = tableHeader.querySelectorAll("th");
+  headerCells.forEach((cell) => {
+    cell.style.position = "sticky";
+    cell.style.top = "0";
+    cell.style.zIndex = "1000";
+    cell.style.backgroundColor = "#4caf50";
+  });
+
+  console.log("Стили фиксированной шапки применены");
+}
+
+// Наблюдатель за изменениями DOM для определения момента создания таблицы
+function setupTableObserver() {
+  console.log("Настройка наблюдателя за таблицей");
+
+  // Конфигурация наблюдателя - следим за добавлением узлов
+  const config = { childList: true, subtree: true };
+
+  // Функция обратного вызова при изменениях DOM
+  const callback = function (mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === "childList" && mutation.addedNodes.length) {
+        // Если добавлены новые узлы, проверяем, появилась ли таблица
+        const financeTable = document.querySelector(
+          ".finance-table, #financeTable"
+        );
+        if (financeTable) {
+          console.log("Таблица найдена, применяем стили");
+          // Даем небольшую задержку для полной отрисовки таблицы
+          setTimeout(initStickyTableHeader, 100);
+        }
+      }
+    }
+  };
+
+  // Создаем экземпляр наблюдателя с указанной функцией обратного вызова
+  const observer = new MutationObserver(callback);
+
+  // Начинаем наблюдение за изменениями в документе
+  observer.observe(document.body, config);
+}
+
+// Функция для модификации createFinanceTableHTML
+function patchCreateFinanceTableHTML() {
+  console.log("Патчим функцию createFinanceTableHTML");
+
+  // Сохраняем оригинальную функцию, если она существует
+  if (typeof window.createFinanceTableHTML === "function") {
+    const originalCreateFinanceTableHTML = window.createFinanceTableHTML;
+
+    window.createFinanceTableHTML = function () {
+      console.log("Вызвана модифицированная createFinanceTableHTML");
+      // Вызываем оригинальную функцию
+      const result = originalCreateFinanceTableHTML.apply(this, arguments);
+
+      // После создания таблицы инициализируем фиксированную шапку
+      setTimeout(initStickyTableHeader, 100);
+
+      return result;
+    };
+  }
+}
+
+// Функция для модификации loadData
+function patchLoadData() {
+  console.log("Патчим функцию loadData");
+
+  // Сохраняем оригинальную функцию, если она существует
+  if (typeof window.loadData === "function") {
+    const originalLoadData = window.loadData;
+
+    window.loadData = function () {
+      console.log("Вызвана модифицированная loadData");
+      // Вызываем оригинальную функцию
+      const result = originalLoadData.apply(this, arguments);
+
+      // После загрузки данных инициализируем фиксированную шапку с задержкой
+      setTimeout(initStickyTableHeader, 1000);
+
+      return result;
+    };
+  }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("DOM загружен, начинаем настройку");
+  setupTableObserver();
+  patchCreateFinanceTableHTML();
+  patchLoadData();
+
+  // Также добавим обработчик события для кнопки загрузки
+  const loadButton = document.getElementById("loadButton");
+  if (loadButton) {
+    loadButton.addEventListener("click", function () {
+      console.log(
+        "Нажата кнопка загрузки, повторно применяем стили через задержку"
+      );
+      setTimeout(initStickyTableHeader, 1000);
+    });
+  }
+});
+
+// Дополнительно инициализируем после полной загрузки страницы
+window.addEventListener("load", function () {
+  console.log("Страница полностью загружена, проверяем наличие таблицы");
+  // Даем время на выполнение всех скриптов
+  setTimeout(initStickyTableHeader, 500);
+});
