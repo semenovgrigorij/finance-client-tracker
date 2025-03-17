@@ -9,6 +9,11 @@ require("dotenv").config();
 const app = express();
 let globalCookies = null;
 
+// Простой health check для Render
+app.get("/healthz", (req, res) => {
+  res.status(200).send("OK");
+});
+
 // Настройка статических файлов
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(path.join(__dirname, "public", "img")));
@@ -678,10 +683,8 @@ async function getRemonlineCookiesForUser(email, password) {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
         "--disable-gpu",
+        "--single-process",
       ],
       // Для Windows, по умолчанию использует Chrome
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
